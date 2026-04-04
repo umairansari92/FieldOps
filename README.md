@@ -5,6 +5,8 @@ A robust, MERN-stack Field Service Management Platform designed for administerin
 > **📄 View the Full System Architecture Document Here:** [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md)
 > **❓ View Pre-Implementation Assumptions & Questions Here:** [QUESTIONS.md](./QUESTIONS.md)
 
+> **💡 System Philosophy:** This system was designed with a "clarity over complexity" approach, prioritizing explicit business logic, maintainability, and real-world workflows over premature optimization.
+
 ---
 ## 🚀 Quick Setup Instructions
 
@@ -45,6 +47,9 @@ npm run dev
 # Starts Vite on http://localhost:5173
 ```
 
+### ✅ Verification
+Once both servers are running, open `http://localhost:5173` and log in using the demo accounts below to explore the system.
+
 ---
 
 ## 🔐 Demo Accounts
@@ -56,6 +61,18 @@ The `npm run seed` command provisions the following roles. All passwords are set
 | **Admin** | `admin@fieldops.com` | `admin123` |
 | **Technician 1** | `john@fieldops.com` | `john123` |
 | **Client 1** | `acme@client.com` | `acme123` |
+
+---
+
+## 🎯 Implemented Core Flow
+
+The following end-to-end flow is fully implemented:
+
+1. Client creates a job request
+2. Admin assigns a technician
+3. Technician accepts the job
+4. Technician updates job status and logs activity
+5. Client views real-time job progress
 
 ---
 
@@ -105,7 +122,7 @@ Because field service workflows vary greatly across companies, the following str
 
 ---
 
-## 🚧 Missing Features (Out of Scope scope)
+## 🚧 Missing Features (Out of Scope)
 
 *   **File Uploads:** Field service often mandates photo proof for completed jobs. Integration with AWS S3 / GridFS was omitted to focus exclusively on solidifying the backend state machine.
 *   **Auto-Assignment Logic:** Having the system automatically dispatch technicians based on geolocation and `skills` tag matching is an enterprise feature. Due to time constraints, assignment requires manual Admin intervention.
