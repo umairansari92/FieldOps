@@ -1,227 +1,111 @@
-# FieldOps – Architecture Document
+# System Architecture & Design Document
 
-## 1. System Overview
+## 1. System Design Overview
+The FieldOps platform follows a classic REST-ful Client-Server architecture utilizing the **MERN** stack (MongoDB, Express, React, Node.js). 
 
-FieldOps is a simplified Field Service Management Platform designed to manage service jobs between clients, administrators, and field technicians.
+The system relies on strong separation of concerns:
+*   **The Client (React)** is entirely stateless regarding business logic. It handles presentation, routing, validation, and JWT storage.
+*   **The Server (Node/Express)** acts as the sole source of truth. It validates roles via middleware, executes business logic, manages data persistence, and logs activity.
+*   **The Database (MongoDB)** stores documents.
 
-The system revolves around a central **Job entity**, which represents a service request created by a client. Admins are responsible for assigning jobs to technicians, while technicians update job progress. Clients can view the status of their jobs.
+## 2. Tech Stack Justification
 
-This architecture focuses on simplicity, clarity, and maintainability while meeting the core requirements of the system.
+| Layer | Chosen Technology | Explicit Justification |
+| :--- | :--- | :--- |
+| **Frontend** | React (Vite) | Chosen for its component-based architecture. For an internal tool with complex, repeating UI patterns (Job Cards, Status Badges, Timelines), React's state management and component reusability is significantly faster to develop with than vanilla JS. Vite provides instantaneous HMR. |
+| **Styling** | Vanilla CSS (Variables) | Standardizing via CSS classes and variables rather than heavy frameworks (MUI/Tailwind) keeps the build size minimal and demonstrates fundamental styling competency. |
+| **Backend** | Node.js + Express | Event-driven, non-blocking I/O is perfect for applications focused on I/O operations (fetching jobs, logging statuses) rather than heavy CPU computation. Express provides minimal and flexible routing. |
+| **Database** | MongoDB + Mongoose | Selected over SQL due to the flexiblity required for the "Jobs" entity. A job's metadata (location, requirements, client details) and its "Activity Timeline" can scale naturally in nested structures or document references without rigid schema migrations during early iterative development. |
+| **Auth** | JSON Web Tokens (JWT) | Stateless authentication strategy that scales perfectly for REST APIs. Prevents database lookups on every request just to verify session state. The token carries the user's `role`, enabling instant frontend rendering decisions. |
 
----
+## 3. Database Design Rationale
 
-## 2. High-Level System Design
+### Entity Relationship & Schema Logic
+1.  **Users** (`name`, `email`, `password`, `role`, `isActive`): Central auth entity. Rather than having separate tables for Technicians, Clients, and Admins, they are unified under `Users` with a `role` enum. This simplifies authentication middleware significantly.
+2.  **Jobs (One-to-Many Focus):** The system relies on a **One-to-Many** relationship (One Client can have Many Jobs, One Technician can have Many Jobs). We use Mongoose references (`ObjectId`) pointing back to the `User` collection. This prevents data duplication and keeps the Job documents lean.
+3.  **ActivityLog (Audit Trail)**: *Crucial for Data Integrity.* Instead of just keeping a nested array of notes inside the Job document, a dedicated collection is used. This prevents the Job document from exceeding BSON size limits over years of updates, and allows for global audit-log queries.
+4.  **Notifications**: Standalone collection for polling.
+
+### Data Integrity & Future Growth
+* **Soft Deletes Strategy:** High-maturity data systems rarely use `DELETE` operations. Instead, data integrity is maintained using "Soft Deletes" (e.g., setting a `status` to `CANCELLED` or an `isActive` flag on Users). This ensures historical records are permanently preserved "even if something goes wrong".
+* **Modular Separation:** The backend is deeply decoupled (Routes ➝ Controllers ➝ Models). This explicit separation of concerns guarantees that handling future business expansions (like adding a `Payments` or `Invoicing` module) will simply require a new Controller/Model pair without rewriting core routing logic.
+
+### Indexing Thoughts
+To handle massive growth, indexes were placed on frequently queried fields:
+*   `Job`: Compound indices on `{ client: 1, status: 1 }` and `{ technician: 1, status: 1 }` since Dashboards continually fetch "My Jobs filtered by Status" to keep search queries ultra-fast.
+*   `User`: Unique index on `email`.
+*   `Notification`: Compound index on `{ recipient: 1, read: 1 }` for rapid badge counting.
+## 4. Auth & Security Strategy
+Tokens are generated via `jsonwebtoken` and expire after 7 days. This stateless auth is perfect for Admin, Tech, and Client roles.
+
+*   **Hashing:** Passwords are never stored in plain text. They are hashed using **`bcrypt`** (12 salt rounds) before hitting the disk.
+*   **Registration Flow:** To maintain organizational security, Technician accounts are **Invite-based** (created by Admins internally), while Clients can theoretically register themselves via an **Open** registration portal.
+
+The backend utilizes standard Express Request Middleware:
+1.  `auth.middleware.js`: Mounts the user object onto `req.user` if the JWT is valid.
+2.  `role.middleware.js`: Higher-order function that restricts access. (e.g., `role('ADMIN', 'TECHNICIAN')` returns `403 Forbidden` if a Client tries to hit an internal endpoint).
+## 5. Deliberate Omissions (What I Chose NOT to Build)
+
+### Backend-For-Frontend (BFF) Layer
+> A Backend-for-Frontend layer could be introduced for better separation of concerns and optimized client-server communication, but it was intentionally not implemented due to time constraints and project scope.
+
+Instead, the frontend optimization is handled via logical API hooks and the backend uses efficient REST endpoints.
+
+### Email Notifications
+I explicitly chose **not to build an automated email notification system (e.g., Nodemailer / SendGrid)**. 
+**Why?** The requirements stated the system must "run locally without paid services." Emulating an SMTP server locally or requiring reviewers to plug in an API key creates friction during testing. Instead, I diverted that engineering effort into building a robust, database-backed **in-app notification center** with real-time polling, which perfectly satisfies the "relevant parties should be informed" requirement while ensuring the app works 100% locally out-of-the-box.
+
+## 6. Core Workflows (Visualized)
+
+### Job Lifecycle State Machine
 
 ```txt
-Client / Admin / Technician
-↓
-Frontend (React - Role-Based UI)
-↓
-Backend API (Node.js + Express)
-↓
-Service Layer (Business Logic)
-↓
-Database (MongoDB)
+[ CLIENT / ADMIN ] 
+       │ (Creates Request)
+       ▼
+   PENDING
+       │
+       ├────────────────┐ (No available tech)
+       │                ▼
+       │             CANCELLED
+    [ADMIN]
+   (Assigns)
+       │
+       ▼
+   ASSIGNED
+       │
+    [TECH]
+   (Accepts)
+       │
+       ▼
+  IN_PROGRESS ────────┐ (Issue Occurs)
+       │              ▼
+       │           BLOCKED
+    [TECH]            │ (Issue Resolved)
+ (Marks Done)         │
+       │  ◀───────────┘
+       ▼
+   COMPLETED
 ```
 
-### Flow Explanation
-
-- Users interact with the frontend based on their roles
-- Frontend communicates with backend via REST APIs
-- Backend processes business logic (job assignment, updates, validation)
-- Data is stored and retrieved from MongoDB
-
----
-
-## 3. Core Components
-
-### Frontend (React)
-
-- Role-based dashboards (Admin, Technician, Client)
-- Job listing and filtering UI
-- Job creation and assignment interface (Admin)
-- Status update and notes system (Technician)
-
-### Backend (Node.js + Express)
-
-- RESTful API for job and user management
-- Role-based authorization middleware
-- Centralized error handling
-- Business logic for job lifecycle and assignment
-
-### Service Layer
-
-- Handles core logic such as:
-  - Job assignment
-  - Status transitions
-  - Notes handling
-  - Validation rules
-
----
-
-## 4. Technology Stack (with Justification)
-
-### Frontend: React
-
-React was chosen for its component-based architecture, enabling reusable UI components and efficient state management for dynamic dashboards.
-
-### Backend: Node.js + Express
-
-Node.js was selected due to its non-blocking, event-driven architecture, making it suitable for handling multiple concurrent job updates and API requests efficiently.
-
-### Database: MongoDB
-
-MongoDB was chosen for its flexible schema, which is ideal for handling dynamic job notes and evolving data structures without strict schema constraints.
-
----
-
-## 5. Database Design
-
-### Collections
-
-#### Users
-- id
-- name
-- email
-- password
-- role (Admin, Technician, Client)
-
-#### Jobs
-- id
-- title
-- description
-- status
-- clientId
-- technicianId
-- scheduledAt
-- createdAt
-
-#### Notes / ActivityLog
-- id
-- jobId
-- technicianId
-- content
-- createdAt
-
----
-
-### Relationships
-
-- One Client → Many Jobs
-- One Technician → Many Jobs
-- One Job → Many Notes
-
----
-
-### Indexing Strategy
-
-To improve performance:
-
-- Index on `status` for filtering jobs
-- Index on `technicianId` for technician dashboards
-- Index on `clientId` for client job views
-
----
-
-## 6. Job Lifecycle
-
-The system follows a defined job lifecycle:
-
-- `pending` → Job created by client
-- `assigned` → Admin assigns technician
-- `in_progress` → Technician accepts and starts work
-- `blocked` → Issue encountered during job
-- `completed` → Job successfully completed
-- `cancelled` → Job cancelled
-
-This lifecycle ensures clear tracking of job progress.
-
----
-
-## 7. Role-Based Access Control (RBAC)
-
-| Role       | Permissions |
-|------------|------------|
-| Admin      | Create jobs, assign/reassign technicians, view all jobs |
-| Technician | View assigned jobs, update status, add notes |
-| Client     | View their own jobs only |
-
-Authorization is enforced using middleware at the backend level.
-
----
-
-## 8. Authentication Strategy
-
-- JWT-based authentication is used
-- Tokens are issued upon login
-- JWT payload includes `userId` and `role`
-- Role-based access is enforced using middleware
-
-This ensures secure and scalable authentication for all user types.
-
----
-
-## 9. Data Integrity & Failure Handling
-
-To handle system failures and ensure data integrity:
-
-- Mongoose schema validation prevents invalid data
-- Centralized error handling middleware ensures consistent API responses
-- Jobs and related data are not hard-deleted to preserve history (Soft Deletes)
-- Failures (e.g., API crash) are handled gracefully with error responses
-
----
-
-## 10. Assumptions
-
-Due to incomplete requirements, the following decisions were made:
-
-- Admin is responsible for assigning technicians manually
-- Technicians must accept jobs before starting work
-- Clients have read-only access to their jobs
-- No automatic technician matching system is implemented
-
----
-
-## 11. Trade-offs
-
-- Monolithic architecture used instead of microservices for simplicity
-- No real-time updates (e.g., WebSockets) implemented
-- Notifications simplified (no email or queue system)
-- Focus placed on core job flow instead of advanced features
-
----
-
-## 12. What Was Not Implemented
-
-The following features were intentionally not included:
-
-- Auto-assignment of technicians
-- Real-time event queues
-- Background job queues
-- Advanced fine-grained sub-permissions
-- Formal email integration
-
-These were excluded to maintain focus on core functionality within the given time constraints.
-
----
-
-## 13. Future Improvements
-
-- Real-time updates using WebSockets
-- Notification system (email)
-- Advanced role permissions
-- Pagination and filtering for large datasets
-- Docker setup for easier deployment
-
----
-
-## 14. Architectural Decisions
-
-A Backend-for-Frontend (BFF) layer could be introduced in the future to optimize communication between frontend and backend. However, it was not implemented to keep the system simple and focused for this assignment.
-
----
-
-## 15. Conclusion
-
-This architecture prioritizes clarity, simplicity, and maintainability while fulfilling the core requirements of a field service management system. The design ensures scalability for future enhancements while keeping the current implementation practical and efficient.
+## 7. Role Permissions Matrix
+
+| Action / Capability | Admin | Technician | Client |
+| :--- | :---: | :---: | :---: |
+| **Create New Job** | ✅ | ❌ | ✅ |
+| **Assign Technician** | ✅ | ❌ | ❌ |
+| **Reassign / Cancel Job** | ✅ | ❌ | ❌ |
+| **Update Status** | ✅ | ✅ (If Assigned) | ❌ |
+| **Add Job Notes** | ✅ | ✅ (If Assigned) | ❌ |
+| **View Internal Audit Logs**| ✅ | ✅ (Own Jobs) | ❌ |
+| **View Job Status** | ✅ | ✅ (Own Jobs) | ✅ (Own Requests)|
+
+## 8. API Design Sample
+
+The API follows strict standard RESTful conventions using plural nouns and HTTP semantics.
+
+**`PATCH /api/jobs/:id/status`**
+- **Purpose:** Updates the state of the job.
+- **Middleware:** `auth()`, `role('ADMIN', 'TECHNICIAN')`
+- **Controller Logic:** Validates that the Technician executing the request actually owns the Job. Converts the new status, throws `400 Bad Request` on invalid state transitions.
+- **Side Effects:** Automatically generates an `ActivityLog` document linking the `actorId` to the status transition (e.g., `ASSIGNED` -> `IN_PROGRESS`).
