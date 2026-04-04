@@ -21,8 +21,8 @@ router.get('/stats', role('ADMIN'), getStats);
 // GET /api/jobs — Role-filtered list
 router.get('/', getJobs);
 
-// POST /api/jobs — Admin only
-router.post('/', role('ADMIN'), createJob);
+// POST /api/jobs — Admin and Client
+router.post('/', role('ADMIN', 'CLIENT'), createJob);
 
 // GET /api/jobs/:id
 router.get('/:id', getJobById);

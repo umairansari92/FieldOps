@@ -76,6 +76,11 @@ const createJob = async (req, res) => {
       return res.status(400).json({ message: 'Title, description, and clientId are required.' });
     }
 
+    // Enforce that Clients can only create jobs for themselves
+    if (req.user.role === 'CLIENT' && clientId !== req.user._id.toString()) {
+      return res.status(403).json({ message: 'Clients can only create jobs for themselves.' });
+    }
+
     const client = await User.findById(clientId);
     if (!client || client.role !== 'CLIENT') {
       return res.status(400).json({ message: 'Invalid client ID.' });
@@ -160,7 +165,7 @@ const updateStatus = async (req, res) => {
   try {
     const { status, note } = req.body;
 
-    const validStatuses = ['PENDING', 'ASSIGNED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED'];
+    const validStatuses = ['PENDING', 'ASSIGNED', 'ACCEPTED', 'IN_PROGRESS', 'BLOCKED', 'COMPLETED', 'CANCELLED'];
     if (!validStatuses.includes(status)) {
       return res.status(400).json({ message: `Invalid status. Valid: ${validStatuses.join(', ')}` });
     }
@@ -239,11 +244,13 @@ const addNote = async (req, res) => {
 // GET /api/jobs/stats — Admin only
 const getStats = async (req, res) => {
   try {
-    const [total, pending, assigned, inProgress, completed, cancelled] = await Promise.all([
+    const [total, pending, assigned, accepted, inProgress, blocked, completed, cancelled] = await Promise.all([
       Job.countDocuments(),
       Job.countDocuments({ status: 'PENDING' }),
       Job.countDocuments({ status: 'ASSIGNED' }),
+      Job.countDocuments({ status: 'ACCEPTED' }),
       Job.countDocuments({ status: 'IN_PROGRESS' }),
+      Job.countDocuments({ status: 'BLOCKED' }),
       Job.countDocuments({ status: 'COMPLETED' }),
       Job.countDocuments({ status: 'CANCELLED' }),
     ]);
@@ -254,7 +261,7 @@ const getStats = async (req, res) => {
       .sort({ createdAt: -1 })
       .limit(5);
 
-    res.json({ total, pending, assigned, inProgress, completed, cancelled, recentJobs });
+    res.json({ total, pending, assigned, accepted, inProgress, blocked, completed, cancelled, recentJobs });
   } catch (err) {
     console.error('getStats error:', err);
     res.status(500).json({ message: 'Failed to fetch stats.' });

@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 
 // Job statuses represent the full lifecycle of a field job
-const JOB_STATUSES = ['PENDING', 'ASSIGNED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED'];
+const JOB_STATUSES = ['PENDING', 'ASSIGNED', 'ACCEPTED', 'IN_PROGRESS', 'BLOCKED', 'COMPLETED', 'CANCELLED'];
 
 const jobSchema = new mongoose.Schema(
   {
