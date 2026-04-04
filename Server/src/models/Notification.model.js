@@ -23,7 +23,7 @@ const notificationSchema = new mongoose.Schema(
     },
     type: {
       type: String,
-      enum: ['JOB_ASSIGNED', 'STATUS_UPDATE', 'NOTE_ADDED', 'JOB_CREATED', 'JOB_CANCELLED'],
+      enum: ['JOB_ASSIGNED', 'STATUS_UPDATE', 'NOTE_ADDED', 'JOB_CREATED', 'JOB_CANCELLED', 'TECH_SIGNUP'],
       required: true,
     },
   },

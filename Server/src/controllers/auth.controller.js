@@ -1,6 +1,7 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const User = require('../models/User.model');
+const Notification = require('../models/Notification.model');
 
 const generateToken = (user) => {
   return jwt.sign(
@@ -31,15 +32,33 @@ const register = async (req, res) => {
     const salt = await bcrypt.genSalt(12);
     const hashedPassword = await bcrypt.hash(password, salt);
 
-    const allowedRoles = ['ADMIN', 'TECHNICIAN', 'CLIENT'];
+    if (role === 'ADMIN') {
+      return res.status(403).json({ message: 'Admin accounts cannot be created via public signup.' });
+    }
+
+    const allowedRoles = ['TECHNICIAN', 'CLIENT'];
     const userRole = allowedRoles.includes(role) ? role : 'CLIENT';
+    
+    const isActive = userRole !== 'TECHNICIAN';
 
     const user = await User.create({
       name,
       email: email.toLowerCase(),
       password: hashedPassword,
       role: userRole,
+      isActive,
     });
+
+    if (userRole === 'TECHNICIAN') {
+      const admin = await User.findOne({ role: 'ADMIN' });
+      if (admin) {
+        await Notification.create({
+          recipient: admin._id,
+          message: `New technician "${user.name}" has signed up and awaits approval.`,
+          type: 'TECH_SIGNUP',
+        });
+      }
+    }
 
     const token = generateToken(user);
 
@@ -51,6 +70,7 @@ const register = async (req, res) => {
         name: user.name,
         email: user.email,
         role: user.role,
+        isActive: user.isActive,
         createdAt: user.createdAt,
       },
     });

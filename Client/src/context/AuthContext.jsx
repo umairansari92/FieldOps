@@ -27,6 +27,11 @@ export const AuthProvider = ({ children }) => {
 
   const register = async (name, email, password, role) => {
     const { data } = await api.post('/auth/register', { name, email, password, role });
+    
+    if (data.user.isActive === false) {
+      return data.user; // Don't log in automatically if approval is needed
+    }
+
     localStorage.setItem('fieldops_token', data.token);
     localStorage.setItem('fieldops_user', JSON.stringify(data.user));
     setUser(data.user);

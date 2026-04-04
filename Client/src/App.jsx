@@ -11,6 +11,7 @@ import Dashboard from './pages/Dashboard';
 import JobList from './pages/JobList';
 import JobDetail from './pages/JobDetail';
 import CreateJob from './pages/CreateJob';
+import TeamManagement from './pages/TeamManagement';
 
 export default function App() {
   return (
@@ -38,15 +39,7 @@ export default function App() {
 
               {/* Admin Only Route */}
               <Route element={<ProtectedRoute allowedRoles={['ADMIN']} />}>
-                <Route path="/users" element={
-                  <div className="container" style={{maxWidth: 800}}>
-                    <div className="empty-state">
-                      <div className="empty-icon">👥</div>
-                      <h3>Team Management</h3>
-                      <p>Full implementation hidden for brevity. Admin would manage roles here.</p>
-                    </div>
-                  </div>
-                } />
+                <Route path="/users" element={<TeamManagement />} />
               </Route>
             </Route>
           </Route>

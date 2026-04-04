@@ -21,9 +21,14 @@ export default function Register() {
     }
     setLoading(true);
     try {
-      await register(form.name, form.email, form.password, form.role);
-      toast.success('Account created! Welcome to FieldOps.');
-      navigate('/dashboard');
+      const user = await register(form.name, form.email, form.password, form.role);
+      if (user.isActive === false) {
+        toast.success('Registration successful. Your account is pending admin approval.', { duration: 5000 });
+        navigate('/login');
+      } else {
+        toast.success('Account created! Welcome to FieldOps.');
+        navigate('/dashboard');
+      }
     } catch (err) {
       setError(err.response?.data?.message || 'Registration failed. Please try again.');
     } finally {
@@ -71,7 +76,6 @@ export default function Register() {
             <select id="role" className="form-select" name="role" value={form.role} onChange={handleChange}>
               <option value="CLIENT">Client (I request services)</option>
               <option value="TECHNICIAN">Technician (I perform field jobs)</option>
-              <option value="ADMIN">Admin (I manage the platform)</option>
             </select>
           </div>
 

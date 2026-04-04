@@ -103,6 +103,13 @@ const createJob = async (req, res) => {
     await logActivity(job._id, req.user._id, `Job "${title}" created.`, 'CREATION');
     await notify(clientId, `A new job "${title}" has been created for you.`, job._id, 'JOB_CREATED');
 
+    if (req.user.role === 'CLIENT') {
+      const admin = await User.findOne({ role: 'ADMIN' });
+      if (admin) {
+        await notify(admin._id, `Client ${req.user.name} submitted a new job request: "${title}".`, job._id, 'JOB_CREATED');
+      }
+    }
+
     if (technicianId) {
       await logActivity(job._id, req.user._id, `Job assigned to technician.`, 'ASSIGNMENT');
       await notify(technicianId, `You have been assigned a new job: "${title}".`, job._id, 'JOB_ASSIGNED');
@@ -233,6 +240,10 @@ const addNote = async (req, res) => {
     }
 
     await logActivity(job._id, req.user._id, note.trim(), 'NOTE');
+
+    if (job.client && req.user._id.toString() !== job.client.toString()) {
+      await notify(job.client, `A new note was added to your job "${job.title}".`, job._id, 'NOTE_ADDED');
+    }
 
     res.json({ message: 'Note added.' });
   } catch (err) {
