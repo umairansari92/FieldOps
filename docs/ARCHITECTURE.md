@@ -22,22 +22,28 @@ The system relies on strong separation of concerns:
 
 ### Entity Relationship & Schema Logic
 1.  **Users** (`name`, `email`, `password`, `role`, `isActive`): Central auth entity. Rather than having separate tables for Technicians, Clients, and Admins, they are unified under `Users` with a `role` enum. This simplifies authentication middleware significantly.
-2.  **Jobs** (`title`, `description`, `status`, `client (Ref)`, `technician (Ref)`): The core entity. Uses Mongoose references (`ObjectId`) pointing back to the `User` collection for the client and tech. 
-3.  **ActivityLog** (`job (Ref)`, `actor (Ref)`, `message`, `type`): *Crucial for Data Integrity.* Instead of just keeping a nested array of notes inside the Job document, a dedicated collection is used. This prevents the Job document from exceeding BSON size limits over years of updates, and allows for global audit-log queries (e.g., "Show me everything Admin X did today").
-4.  **Notifications** (`recipient (Ref)`, `message`, `read`): Handles the requirement to keep parties "informed".
+2.  **Jobs (One-to-Many Focus):** The system relies on a **One-to-Many** relationship (One Client can have Many Jobs, One Technician can have Many Jobs). We use Mongoose references (`ObjectId`) pointing back to the `User` collection. This prevents data duplication and keeps the Job documents lean.
+3.  **ActivityLog (Audit Trail)**: *Crucial for Data Integrity.* Instead of just keeping a nested array of notes inside the Job document, a dedicated collection is used. This prevents the Job document from exceeding BSON size limits over years of updates, and allows for global audit-log queries.
+4.  **Notifications**: Standalone collection for polling.
+
+### Data Integrity & Future Growth
+* **Soft Deletes Strategy:** High-maturity data systems rarely use `DELETE` operations. Instead, data integrity is maintained using "Soft Deletes" (e.g., setting a `status` to `CANCELLED` or an `isActive` flag on Users). This ensures historical records are permanently preserved "even if something goes wrong".
+* **Modular Separation:** The backend is deeply decoupled (Routes ➝ Controllers ➝ Models). This explicit separation of concerns guarantees that handling future business expansions (like adding a `Payments` or `Invoicing` module) will simply require a new Controller/Model pair without rewriting core routing logic.
 
 ### Indexing Thoughts
-To handle growth, indexes were placed on frequently queried fields:
-*   `Job`: Compound indices on `{ client: 1, status: 1 }` and `{ technician: 1, status: 1 }` since Dashboards continually fetch "My Jobs filtered by Status".
+To handle massive growth, indexes were placed on frequently queried fields:
+*   `Job`: Compound indices on `{ client: 1, status: 1 }` and `{ technician: 1, status: 1 }` since Dashboards continually fetch "My Jobs filtered by Status" to keep search queries ultra-fast.
 *   `User`: Unique index on `email`.
 *   `Notification`: Compound index on `{ recipient: 1, read: 1 }` for rapid badge counting.
-
 ## 4. Auth & Security Strategy
-Tokens are generated via `jsonwebtoken` and expire after 7 days. Passwords are hashed using `bcrypt` (12 salt rounds) before hitting the disk.
+Tokens are generated via `jsonwebtoken` and expire after 7 days. This stateless auth is perfect for Admin, Tech, and Client roles.
+
+*   **Hashing:** Passwords are never stored in plain text. They are hashed using **`bcrypt`** (12 salt rounds) before hitting the disk.
+*   **Registration Flow:** To maintain organizational security, Technician accounts are **Invite-based** (created by Admins internally), while Clients can theoretically register themselves via an **Open** registration portal.
+
 The backend utilizes standard Express Request Middleware:
 1.  `auth.middleware.js`: Mounts the user object onto `req.user` if the JWT is valid.
-2.  `role.middleware.js`: Higher-order function that takes arrays of allowed roles (e.g., `role('ADMIN', 'TECHNICIAN')`) and returns a 403 Forbidden if the user's role isn't included.
-
+2.  `role.middleware.js`: Higher-order function that restricts access. (e.g., `role('ADMIN', 'TECHNICIAN')` returns `403 Forbidden` if a Client tries to hit an internal endpoint).
 ## 5. Deliberate Omissions (What I Chose NOT to Build)
 
 ### Backend-For-Frontend (BFF) Layer
