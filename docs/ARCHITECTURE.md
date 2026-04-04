@@ -1,0 +1,50 @@
+# System Architecture & Design Document
+
+## 1. System Design Overview
+The FieldOps platform follows a classic REST-ful Client-Server architecture utilizing the **MERN** stack (MongoDB, Express, React, Node.js). 
+
+The system relies on strong separation of concerns:
+*   **The Client (React)** is entirely stateless regarding business logic. It handles presentation, routing, validation, and JWT storage.
+*   **The Server (Node/Express)** acts as the sole source of truth. It validates roles via middleware, executes business logic, manages data persistence, and logs activity.
+*   **The Database (MongoDB)** stores documents.
+
+## 2. Tech Stack Justification
+
+| Layer | Chosen Technology | Explicit Justification |
+| :--- | :--- | :--- |
+| **Frontend** | React (Vite) | Chosen for its component-based architecture. For an internal tool with complex, repeating UI patterns (Job Cards, Status Badges, Timelines), React's state management and component reusability is significantly faster to develop with than vanilla JS. Vite provides instantaneous HMR. |
+| **Styling** | Vanilla CSS (Variables) | Standardizing via CSS classes and variables rather than heavy frameworks (MUI/Tailwind) keeps the build size minimal and demonstrates fundamental styling competency. |
+| **Backend** | Node.js + Express | Event-driven, non-blocking I/O is perfect for applications focused on I/O operations (fetching jobs, logging statuses) rather than heavy CPU computation. Express provides minimal and flexible routing. |
+| **Database** | MongoDB + Mongoose | Selected over SQL due to the flexiblity required for the "Jobs" entity. A job's metadata (location, requirements, client details) and its "Activity Timeline" can scale naturally in nested structures or document references without rigid schema migrations during early iterative development. |
+| **Auth** | JSON Web Tokens (JWT) | Stateless authentication strategy that scales perfectly for REST APIs. Prevents database lookups on every request just to verify session state. The token carries the user's `role`, enabling instant frontend rendering decisions. |
+
+## 3. Database Design Rationale
+
+### Entity Relationship & Schema Logic
+1.  **Users** (`name`, `email`, `password`, `role`, `isActive`): Central auth entity. Rather than having separate tables for Technicians, Clients, and Admins, they are unified under `Users` with a `role` enum. This simplifies authentication middleware significantly.
+2.  **Jobs** (`title`, `description`, `status`, `client (Ref)`, `technician (Ref)`): The core entity. Uses Mongoose references (`ObjectId`) pointing back to the `User` collection for the client and tech. 
+3.  **ActivityLog** (`job (Ref)`, `actor (Ref)`, `message`, `type`): *Crucial for Data Integrity.* Instead of just keeping a nested array of notes inside the Job document, a dedicated collection is used. This prevents the Job document from exceeding BSON size limits over years of updates, and allows for global audit-log queries (e.g., "Show me everything Admin X did today").
+4.  **Notifications** (`recipient (Ref)`, `message`, `read`): Handles the requirement to keep parties "informed".
+
+### Indexing Thoughts
+To handle growth, indexes were placed on frequently queried fields:
+*   `Job`: Compound indices on `{ client: 1, status: 1 }` and `{ technician: 1, status: 1 }` since Dashboards continually fetch "My Jobs filtered by Status".
+*   `User`: Unique index on `email`.
+*   `Notification`: Compound index on `{ recipient: 1, read: 1 }` for rapid badge counting.
+
+## 4. Auth & Security Strategy
+Tokens are generated via `jsonwebtoken` and expire after 7 days. Passwords are hashed using `bcrypt` (12 salt rounds) before hitting the disk.
+The backend utilizes standard Express Request Middleware:
+1.  `auth.middleware.js`: Mounts the user object onto `req.user` if the JWT is valid.
+2.  `role.middleware.js`: Higher-order function that takes arrays of allowed roles (e.g., `role('ADMIN', 'TECHNICIAN')`) and returns a 403 Forbidden if the user's role isn't included.
+
+## 5. Deliberate Omissions (What I Chose NOT to Build)
+
+### Backend-For-Frontend (BFF) Layer
+> A Backend-for-Frontend layer could be introduced for better separation of concerns and optimized client-server communication, but it was intentionally not implemented due to time constraints and project scope.
+
+Instead, the frontend optimization is handled via logical API hooks and the backend uses efficient REST endpoints.
+
+### Email Notifications
+I explicitly chose **not to build an automated email notification system (e.g., Nodemailer / SendGrid)**. 
+**Why?** The requirements stated the system must "run locally without paid services." Emulating an SMTP server locally or requiring reviewers to plug in an API key creates friction during testing. Instead, I diverted that engineering effort into building a robust, database-backed **in-app notification center** with real-time polling, which perfectly satisfies the "relevant parties should be informed" requirement while ensuring the app works 100% locally out-of-the-box.
