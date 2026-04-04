@@ -1,61 +1,97 @@
 # FieldOps - Field Service Management Platform
 
-A simplified Field Service Management Platform built for administering field technicians, tracking jobs, and providing client visibility.
+A robust, MERN-stack Field Service Management Platform designed for administering field technicians, tracking complex job lifecycles, and providing client visibility.
+
+---
 
 ## 🚀 Quick Setup Instructions
 
-Make sure you have Node.js and MongoDB installed and running locally.
+### Prerequisites
+- Node.js (v18+)
+- MongoDB running locally on default port (27017)
 
 ### 1. Database Setup
-Ensure your local MongoDB instance is running on `mongodb://localhost:27017`.
+Ensure your local MongoDB instance is running:
+`mongodb://localhost:27017`
 
 ### 2. Backend Setup
+Navigate to the server directory and set up the environment:
 ```bash
 cd Server
 npm install
-# The .env file is already provided, but you can copy .env.example
-npm run seed  # This will wipe the DB and create 5 demo users and 4 demo jobs
-npm run dev   # Starts the server on http://localhost:5000
+```
+*(The `.env` file is already configured, but for production you should duplicate `.env.example`)*
+
+**Seed the Database (Required for Demo):**
+This command will wipe the existing database and provision demo users, realistic jobs, and activity logs.
+```bash
+npm run seed
+```
+
+**Start the Server:**
+```bash
+npm run dev
+# Starts the server on http://localhost:5000
 ```
 
 ### 3. Frontend Setup
+Navigate to the client directory in a new terminal window:
 ```bash
-# In a new terminal
 cd Client
 npm install
-npm run dev   # Starts the React app on http://localhost:5173
+npm run dev
+# Starts Vite on http://localhost:5173
 ```
 
-### 4. Demo Accounts
-The `npm run seed` command provisions the following roles (password is all lowercase `name123`):
-*   **Admin**: `admin@fieldops.com` / `admin123`
-*   **Technician**: `john@fieldops.com` / `john123`
-*   **Client**: `acme@client.com` / `acme123`
+---
+
+## 🔐 Demo Accounts
+
+The `npm run seed` command provisions the following roles. All passwords are set to `[name]123`:
+
+| Role | Email | Password |
+| :--- | :--- | :--- |
+| **Admin** | `admin@fieldops.com` | `admin123` |
+| **Technician 1** | `john@fieldops.com` | `john123` |
+| **Client 1** | `acme@client.com` | `acme123` |
 
 ---
 
-## 🏗️ Architecture & Decisions
+## 🛠️ Architecture Overview
 
-For detailed design choices, database schema, and ERD logic, please check the [Architecture Document](./docs/ARCHITECTURE.md).
+The system strictly adheres to a standard client-server RESTful architecture:
+**React (Vite) ➝ Express REST API ➝ MongoDB**
 
-### General Assumptions Made
-1.  **Job Workflow**: I assumed a rigid, professional flow. Clients cannot assign technicians; they can only request work (Client role creates an implicit pending job—though for this demo, only admins create jobs). Admins create jobs and assign them. Technicians can only change the status of jobs they have been explicitly assigned.
-2.  **Notification Strategy**: Real-time push notifications or emails require third-party services (SendGrid/WebSockets) which violates the "local only" constraint or takes too much time. I opted for a highly functional in-app polling notification bell that queries a `Notification` collection.
-3.  **Authentication**: I assumed a standard stateless JWT approach is sufficient. The token handles roles natively on the frontend via Context API.
-
-### Trade-offs
-*   **Image Uploads**: Field technicians usually upload photos of their completed work. I omitted file uploads (AWS S3 / GridFS) to keep the backend lean and focus strictly on the status lifecycle.
-*   **Real-time WebSockets**: I used short-polling (30 seconds) for the notification bell. In a production MERN app, I would use `socket.io` for instant updates without HTTP overhead, but Polling was chosen here for rapid development and guaranteed local stability without extra port configuration.
-*   **No Redux**: Used standard React Context for Auth state. For a larger app with complex caching, I would introduce Redux Toolkit or React Query.
-
-### What's Missing?
-*   **User Management UI**: The API supports activating/deactivating accounts, but the Frontend UI for this was skipped to prioritize the core "Job Flow" quality.
-*   **Forgot Password flow**: Omitted entirely to focus on core domain.
-*   **Technician Declines**: Currently, a technician is assigned dictatorial style. A feature allowing a tech to "Decline" a job back to the pool is missing.
+For deep, component-level architectural decisions, tech stack justification, and ERD logic, please refer to the detailed [Architecture Document](./docs/ARCHITECTURE.md).
 
 ---
 
-## 🏆 Bonus Tasks Implemented
+## 🧠 Assumptions & Design Decisions
 
-*   ✅ **Audit Log**: The `ActivityLog` model meticulously records who changed what and when. This is visible in the Job Details timeline.
-*   ✅ **Fine-grained RBAC**: Beyond simple routes, the backend verifies if a Technician *actually owns* the job before allowing a status update.
+Because field service workflows vary greatly across companies, the following strict boundaries were established to maintain scope:
+
+1. **Job Workflow (Admin-Centric):** 
+   Clients have the ability to *create* service requests (defaulting to a `PENDING` state), but they cannot assign technicians. Only Admins can assign existing technicians based on availability and skills.
+2. **Technician Accountability Flow:** 
+   When an admin assigns a technician, the job status moves to `ASSIGNED`. The technician must explicitly click "Accept" in their dashboard (moving status to `ACCEPTED`) before work begins (`IN_PROGRESS`). If rejected, the job returns to `PENDING` for reassignment.
+3. **Issue Reporting (Blocked State):**
+   Technicians facing on-site issues (e.g., missing parts, client absent) can mark an `IN_PROGRESS` job as `BLOCKED`.
+4. **Data Integrity (Audit Logging):** 
+   Rather than simple nested arrays inside the `Job` document, an isolated `ActivityLog` collection acts as an immutable audit trail. This ensures historical consistency regardless of human error or document scaling issues.
+
+---
+
+## ⚠️ Trade-offs
+
+*   **Real-time Push Notifications vs. Short-Polling:**
+    Implementing WebSockets (`socket.io`) or external providers like Twilio for real-time pushing was avoided to reduce reliance on third-party services and complex port routing for a local test assignment. Instead, a lightweight short-polling HTTP mechanism drives the Notification Bell, keeping the app 100% locally independent.
+*   **Backend-for-Frontend (BFF) Omission:**
+    A dedicated BFF API gateway could have been introduced to optimize client-server data orchestration. However, to prioritize clean code, readability, and the 6-10 hour time constraint, a standard Express REST API was favored over an overly complex microservice layer.
+
+---
+
+## 🚧 Missing Features (Out of Scope scope)
+
+*   **File Uploads:** Field service often mandates photo proof for completed jobs. Integration with AWS S3 / GridFS was omitted to focus exclusively on solidifying the backend state machine.
+*   **Auto-Assignment Logic:** Having the system automatically dispatch technicians based on geolocation and `skills` tag matching is an enterprise feature. Due to time constraints, assignment requires manual Admin intervention.
+*   **"Forgot Password" Email Flow:** Standard auth recovery flows requiring SMTP emulation were bypassed to maintain strict focus on the core "Field Service" domain.
