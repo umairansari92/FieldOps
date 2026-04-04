@@ -12,6 +12,8 @@ export default function JobDetail() {
   const [loading, setLoading] = useState(true);
   const [newNote, setNewNote] = useState('');
   const [statusUpdating, setStatusUpdating] = useState(false);
+  const [technicians, setTechnicians] = useState([]);
+  const [selectedTech, setSelectedTech] = useState('');
 
   const fetchJob = () => {
     api.get(`/jobs/${id}`)
@@ -25,7 +27,10 @@ export default function JobDetail() {
 
   useEffect(() => {
     fetchJob();
-  }, [id]);
+    if (user.role === 'ADMIN') {
+      api.get('/users?role=TECHNICIAN').then(res => setTechnicians(res.data.users)).catch(console.error);
+    }
+  }, [id, user.role]);
 
   const handleStatusChange = async (newStatus) => {
     setStatusUpdating(true);
@@ -35,6 +40,21 @@ export default function JobDetail() {
       fetchJob();
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to update status');
+    } finally {
+      setStatusUpdating(false);
+    }
+  };
+
+  const handleAssign = async () => {
+    if (!selectedTech) return toast.error('Select a technician first');
+    setStatusUpdating(true);
+    try {
+      await api.patch(`/jobs/${id}/assign`, { technicianId: selectedTech });
+      toast.success('Job assigned successfully');
+      setSelectedTech('');
+      fetchJob();
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to assign job');
     } finally {
       setStatusUpdating(false);
     }
@@ -165,8 +185,27 @@ export default function JobDetail() {
               <div>
                 <div className="form-label" style={{ marginBottom: '0.75rem' }}>Update Status</div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                  {job.status === 'PENDING' && user.role === 'ADMIN' && (
-                    <button className="btn btn-secondary btn-full" disabled>Assign tech to start</button>
+                  {user.role === 'ADMIN' && job.status !== 'COMPLETED' && job.status !== 'CANCELLED' && (
+                    <div style={{ paddingBottom: '1rem', borderBottom: '1px solid var(--border)', marginBottom: '0.5rem' }}>
+                      <label className="form-label">Assign / Reassign</label>
+                      <div style={{ display: 'flex', gap: '0.5rem' }}>
+                        <select 
+                          className="form-select" 
+                          value={selectedTech} 
+                          onChange={(e) => setSelectedTech(e.target.value)}
+                        >
+                          <option value="">-- Select Tech --</option>
+                          {technicians.map(t => <option key={t._id} value={t._id}>{t.name}</option>)}
+                        </select>
+                        <button 
+                          className="btn btn-primary" 
+                          onClick={handleAssign} 
+                          disabled={!selectedTech || statusUpdating}
+                        >
+                          Assign
+                        </button>
+                      </div>
+                    </div>
                   )}
                   {job.status === 'ASSIGNED' && (
                     <button className="btn btn-primary btn-full" onClick={() => handleStatusChange('IN_PROGRESS')} disabled={statusUpdating}>Start Job (In Progress)</button>
