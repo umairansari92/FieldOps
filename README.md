@@ -3,6 +3,7 @@
 A robust, MERN-stack Field Service Management Platform designed for administering field technicians, tracking complex job lifecycles, and providing client visibility.
 
 > **📄 View the Full System Architecture Document Here:** [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md)
+> **❓ View Pre-Implementation Assumptions & Questions Here:** [QUESTIONS.md](./QUESTIONS.md)
 
 ---
 ## 🚀 Quick Setup Instructions
