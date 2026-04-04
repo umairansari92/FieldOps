@@ -48,3 +48,58 @@ Instead, the frontend optimization is handled via logical API hooks and the back
 ### Email Notifications
 I explicitly chose **not to build an automated email notification system (e.g., Nodemailer / SendGrid)**. 
 **Why?** The requirements stated the system must "run locally without paid services." Emulating an SMTP server locally or requiring reviewers to plug in an API key creates friction during testing. Instead, I diverted that engineering effort into building a robust, database-backed **in-app notification center** with real-time polling, which perfectly satisfies the "relevant parties should be informed" requirement while ensuring the app works 100% locally out-of-the-box.
+
+## 6. Core Workflows (Visualized)
+
+### Job Lifecycle State Machine
+
+```txt
+[ CLIENT / ADMIN ] 
+       │ (Creates Request)
+       ▼
+   PENDING
+       │
+       ├────────────────┐ (No available tech)
+       │                ▼
+       │             CANCELLED
+    [ADMIN]
+   (Assigns)
+       │
+       ▼
+   ASSIGNED
+       │
+    [TECH]
+   (Accepts)
+       │
+       ▼
+  IN_PROGRESS ────────┐ (Issue Occurs)
+       │              ▼
+       │           BLOCKED
+    [TECH]            │ (Issue Resolved)
+ (Marks Done)         │
+       │  ◀───────────┘
+       ▼
+   COMPLETED
+```
+
+## 7. Role Permissions Matrix
+
+| Action / Capability | Admin | Technician | Client |
+| :--- | :---: | :---: | :---: |
+| **Create New Job** | ✅ | ❌ | ✅ |
+| **Assign Technician** | ✅ | ❌ | ❌ |
+| **Reassign / Cancel Job** | ✅ | ❌ | ❌ |
+| **Update Status** | ✅ | ✅ (If Assigned) | ❌ |
+| **Add Job Notes** | ✅ | ✅ (If Assigned) | ❌ |
+| **View Internal Audit Logs**| ✅ | ✅ (Own Jobs) | ❌ |
+| **View Job Status** | ✅ | ✅ (Own Jobs) | ✅ (Own Requests)|
+
+## 8. API Design Sample
+
+The API follows strict standard RESTful conventions using plural nouns and HTTP semantics.
+
+**`PATCH /api/jobs/:id/status`**
+- **Purpose:** Updates the state of the job.
+- **Middleware:** `auth()`, `role('ADMIN', 'TECHNICIAN')`
+- **Controller Logic:** Validates that the Technician executing the request actually owns the Job. Converts the new status, throws `400 Bad Request` on invalid state transitions.
+- **Side Effects:** Automatically generates an `ActivityLog` document linking the `actorId` to the status transition (e.g., `ASSIGNED` -> `IN_PROGRESS`).

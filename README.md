@@ -57,12 +57,25 @@ The `npm run seed` command provisions the following roles. All passwords are set
 
 ---
 
-## 🛠️ Architecture Overview
+## 🏗️ Approaches Used & Why (System Design Justification)
 
-The system strictly adheres to a standard client-server RESTful architecture:
-**React (Vite) ➝ Express REST API ➝ MongoDB**
+To demonstrate Mid-Level System Thinking, specific design choices were made over standard CRUD approaches:
 
-For deep, component-level architectural decisions, tech stack justification, and ERD logic, please refer to the detailed [Architecture Document](./docs/ARCHITECTURE.md).
+### 1. Technology Stack Decisions
+| Layer | Approach Used | Why this approach? |
+| :--- | :--- | :--- |
+| **Frontend** | Component-Based React (Vite) | The UI requires complex, repeating patterns (Job Cards, Status Badges, Timelines). React's state management and component reusability is significantly faster and cleaner than vanilla JS. Vite provides instantaneous HMR. |
+| **Backend** | Node.js + Express REST API | The required workflow (fetching jobs, logging statuses) is heavily I/O-bound. Node.js's event-driven, non-blocking I/O is perfect for this. Express was chosen for modular routing. |
+| **Database** | MongoDB + Mongoose | Selected over SQL due to the flexibility required for the "Jobs" entity. A job's metadata and nested status histories can scale without rigid schema migrations during early development stages. |
+| **Auth** | Stateless JWT | Passing a JSON Web Token handles authentication securely without hitting the database on every request to verify a session state. The token natively carries the user's `role`. |
+
+### 2. Workflow & Domain Approaches
+| Feature | Approach Used | Why this approach? |
+| :--- | :--- | :--- |
+| **Job Lifecycle** | Strict State Machine (`PENDING` → `ASSIGNED` → `ACCEPTED` → `IN_PROGRESS` → `BLOCKED` / `COMPLETED`) | A simple "created/done" bool is too junior. We need to mirror real-world pipelines. Technicians must explicitly *accept* jobs to create accountability. Jobs can be *blocked* if actual physical constraints occur on-site. |
+| **Job Assignment** | Manual Admin Assignment via Visible Skills | Over-engineering auto-assignment based on geo-location and algorithm is a time-sink for a 6-10 hour test. The practical, enterprise-standard approach is providing Admins the visibility of Technician `skills` to manually assign intelligently. |
+| **Data Integrity** | Immutable Audit Trail (`ActivityLog` Collection) | Modifying a job status blindly overwrites history. Instead, an isolated `ActivityLog` collection is created. This ensures full traceability (e.g. "Admin A assigned Tech B on Tuesday"). |
+| **Notifications** | In-App Database Polling | Avoiding third-party email APIs (SendGrid) prevents reviewer friction or API key issues. In-app notifications ensure the platform runs 100% locally while still fulfilling the "keep relevant users informed" requirement. |
 
 ---
 
