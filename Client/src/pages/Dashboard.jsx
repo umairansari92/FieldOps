@@ -224,6 +224,9 @@ function ClientDashboard() {
           <h1>Welcome, {user?.name?.split(' ')[0]}</h1>
           <p>Track your service requests in real-time</p>
         </div>
+        <button className="btn btn-primary" onClick={() => navigate('/jobs/new')}>
+          + New Request
+        </button>
       </div>
 
       <div className="grid-3" style={{ marginBottom: '2rem' }}>

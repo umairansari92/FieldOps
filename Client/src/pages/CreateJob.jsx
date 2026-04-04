@@ -1,23 +1,27 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import api from '../api/axios';
 import toast from 'react-hot-toast';
 
 export default function CreateJob() {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'ADMIN';
   const [clients, setClients] = useState([]);
   const [technicians, setTechnicians] = useState([]);
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState({
     title: '',
     description: '',
-    clientId: '',
+    clientId: isAdmin ? '' : user?._id || '',
     technicianId: '',
     priority: 'MEDIUM',
     location: '',
   });
 
   useEffect(() => {
+    if (!isAdmin) return;
     // Fetch clients and technicians for the dropdowns
     Promise.all([
       api.get('/users?role=CLIENT'),
@@ -83,23 +87,25 @@ export default function CreateJob() {
             />
           </div>
 
-          <div className="form-grid">
-            <div className="form-group">
-              <label className="form-label">Client *</label>
-              <select className="form-select" name="clientId" value={form.clientId} onChange={handleChange} required>
-                <option value="" disabled>Select Client</option>
-                {clients.map(c => <option key={c._id} value={c._id}>{c.name} ({c.email})</option>)}
-              </select>
-            </div>
+          {isAdmin && (
+            <div className="form-grid">
+              <div className="form-group">
+                <label className="form-label">Client *</label>
+                <select className="form-select" name="clientId" value={form.clientId} onChange={handleChange} required>
+                  <option value="" disabled>Select Client</option>
+                  {clients.map(c => <option key={c._id} value={c._id}>{c.name} ({c.email})</option>)}
+                </select>
+              </div>
 
-            <div className="form-group">
-              <label className="form-label">Assign Technician</label>
-              <select className="form-select" name="technicianId" value={form.technicianId} onChange={handleChange}>
-                <option value="">-- Unassigned --</option>
-                {technicians.map(t => <option key={t._id} value={t._id}>{t.name}</option>)}
-              </select>
+              <div className="form-group">
+                <label className="form-label">Assign Technician</label>
+                <select className="form-select" name="technicianId" value={form.technicianId} onChange={handleChange}>
+                  <option value="">-- Unassigned --</option>
+                  {technicians.map(t => <option key={t._id} value={t._id}>{t.name}</option>)}
+                </select>
+              </div>
             </div>
-          </div>
+          )}
 
           <div className="form-grid">
             <div className="form-group">

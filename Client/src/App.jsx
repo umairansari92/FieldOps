@@ -31,9 +31,13 @@ export default function App() {
               <Route path="/jobs" element={<JobList />} />
               <Route path="/jobs/:id" element={<JobDetail />} />
               
+              {/* Admin & Client Route */}
+              <Route element={<ProtectedRoute allowedRoles={['ADMIN', 'CLIENT']} />}>
+                <Route path="/jobs/new" element={<CreateJob />} />
+              </Route>
+
               {/* Admin Only Route */}
               <Route element={<ProtectedRoute allowedRoles={['ADMIN']} />}>
-                <Route path="/jobs/new" element={<CreateJob />} />
                 <Route path="/users" element={
                   <div className="container" style={{maxWidth: 800}}>
                     <div className="empty-state">
