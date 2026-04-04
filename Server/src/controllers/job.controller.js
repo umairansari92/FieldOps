@@ -9,9 +9,9 @@ const logActivity = async (jobId, actorId, message, type, previousStatus = null,
 };
 
 // Helper to send a notification to a user
-const notify = async (recipientId, message, jobId, type) => {
+const notify = async (recipientId, message, jobId, type, senderId = null) => {
   if (recipientId) {
-    await Notification.create({ recipient: recipientId, message, job: jobId, type });
+    await Notification.create({ recipient: recipientId, message, job: jobId, type, sender: senderId });
   }
 };
 
@@ -101,18 +101,18 @@ const createJob = async (req, res) => {
     const job = await Job.create(jobData);
 
     await logActivity(job._id, req.user._id, `Job "${title}" created.`, 'CREATION');
-    await notify(clientId, `A new job "${title}" has been created for you.`, job._id, 'JOB_CREATED');
+    await notify(clientId, `A new job "${title}" has been created for you.`, job._id, 'JOB_CREATED', req.user._id);
 
     if (req.user.role === 'CLIENT') {
       const admin = await User.findOne({ role: 'ADMIN' });
       if (admin) {
-        await notify(admin._id, `Client ${req.user.name} submitted a new job request: "${title}".`, job._id, 'JOB_CREATED');
+        await notify(admin._id, `Client ${req.user.name} submitted a new job request: "${title}".`, job._id, 'JOB_CREATED', req.user._id);
       }
     }
 
     if (technicianId) {
       await logActivity(job._id, req.user._id, `Job assigned to technician.`, 'ASSIGNMENT');
-      await notify(technicianId, `You have been assigned a new job: "${title}".`, job._id, 'JOB_ASSIGNED');
+      await notify(technicianId, `You have been assigned a new job: "${title}".`, job._id, 'JOB_ASSIGNED', req.user._id);
     }
 
     const populated = await Job.findById(job._id)
@@ -150,10 +150,10 @@ const assignJob = async (req, res) => {
     await job.save();
 
     await logActivity(job._id, req.user._id, `Job assigned to ${tech.name}.`, 'ASSIGNMENT');
-    await notify(technicianId, `You have been assigned job: "${job.title}".`, job._id, 'JOB_ASSIGNED');
+    await notify(technicianId, `You have been assigned job: "${job.title}".`, job._id, 'JOB_ASSIGNED', req.user._id);
     // Notify previous technician if reassigned
     if (previousTechId && previousTechId.toString() !== technicianId) {
-      await notify(previousTechId, `Job "${job.title}" has been reassigned.`, job._id, 'STATUS_UPDATE');
+      await notify(previousTechId, `Job "${job.title}" has been reassigned.`, job._id, 'STATUS_UPDATE', req.user._id);
     }
 
     const populated = await Job.findById(job._id)
@@ -203,15 +203,15 @@ const updateStatus = async (req, res) => {
     // Notify relevant parties
     const updaterName = req.user.name;
     if (job.client?._id) {
-      await notify(job.client._id, `Your job "${job.title}" status updated to ${status}.`, job._id, 'STATUS_UPDATE');
+      await notify(job.client._id, `Your job "${job.title}" status updated to ${status}.`, job._id, 'STATUS_UPDATE', req.user._id);
     }
     if (job.technician?._id && job.technician._id.toString() !== req.user._id.toString()) {
-      await notify(job.technician._id, `Job "${job.title}" status updated to ${status} by ${updaterName}.`, job._id, 'STATUS_UPDATE');
+      await notify(job.technician._id, `Job "${job.title}" status updated to ${status} by ${updaterName}.`, job._id, 'STATUS_UPDATE', req.user._id);
     }
 
     // If cancelled, also notify the technician
     if (status === 'CANCELLED' && job.technician?._id) {
-      await notify(job.technician._id, `Job "${job.title}" has been cancelled.`, job._id, 'JOB_CANCELLED');
+      await notify(job.technician._id, `Job "${job.title}" has been cancelled.`, job._id, 'JOB_CANCELLED', req.user._id);
     }
 
     res.json({ message: 'Status updated.', job: await Job.findById(job._id).populate('client', 'name email').populate('technician', 'name email') });
@@ -242,7 +242,7 @@ const addNote = async (req, res) => {
     await logActivity(job._id, req.user._id, note.trim(), 'NOTE');
 
     if (job.client && req.user._id.toString() !== job.client.toString()) {
-      await notify(job.client, `A new note was added to your job "${job.title}".`, job._id, 'NOTE_ADDED');
+      await notify(job.client, `A new note was added to your job "${job.title}".`, job._id, 'NOTE_ADDED', req.user._id);
     }
 
     res.json({ message: 'Note added.' });
@@ -255,7 +255,7 @@ const addNote = async (req, res) => {
 // GET /api/jobs/stats — Admin only
 const getStats = async (req, res) => {
   try {
-    const [total, pending, assigned, accepted, inProgress, blocked, completed, cancelled] = await Promise.all([
+    const [total, pending, assigned, accepted, inProgress, blocked, completed, cancelled, pendingTechCount] = await Promise.all([
       Job.countDocuments(),
       Job.countDocuments({ status: 'PENDING' }),
       Job.countDocuments({ status: 'ASSIGNED' }),
@@ -264,6 +264,7 @@ const getStats = async (req, res) => {
       Job.countDocuments({ status: 'BLOCKED' }),
       Job.countDocuments({ status: 'COMPLETED' }),
       Job.countDocuments({ status: 'CANCELLED' }),
+      User.countDocuments({ role: 'TECHNICIAN', isActive: false }),
     ]);
 
     const recentJobs = await Job.find()
@@ -272,7 +273,7 @@ const getStats = async (req, res) => {
       .sort({ createdAt: -1 })
       .limit(5);
 
-    res.json({ total, pending, assigned, accepted, inProgress, blocked, completed, cancelled, recentJobs });
+    res.json({ total, pending, assigned, accepted, inProgress, blocked, completed, cancelled, recentJobs, pendingTechCount });
   } catch (err) {
     console.error('getStats error:', err);
     res.status(500).json({ message: 'Failed to fetch stats.' });

@@ -12,6 +12,7 @@ import JobList from './pages/JobList';
 import JobDetail from './pages/JobDetail';
 import CreateJob from './pages/CreateJob';
 import TeamManagement from './pages/TeamManagement';
+import Profile from './pages/Profile';
 
 export default function App() {
   return (
@@ -27,10 +28,11 @@ export default function App() {
 
           {/* Protected Routes inside Layout */}
           <Route element={<ProtectedRoute />}>
-            <Route element={<Layout />}>
-              <Route path="/dashboard" element={<Dashboard />} />
-              <Route path="/jobs" element={<JobList />} />
-              <Route path="/jobs/:id" element={<JobDetail />} />
+              <Route element={<Layout />}>
+                <Route path="/dashboard" element={<Dashboard />} />
+                <Route path="/jobs" element={<JobList />} />
+                <Route path="/jobs/:id" element={<JobDetail />} />
+                <Route path="/profile" element={<Profile />} />
               
               {/* Admin & Client Route */}
               <Route element={<ProtectedRoute allowedRoles={['ADMIN', 'CLIENT']} />}>

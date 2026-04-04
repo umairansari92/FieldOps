@@ -11,6 +11,12 @@ const notificationSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
+    // The user who triggered the notification (e.g. sender of signup/note)
+    sender: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      default: null,
+    },
     // Link to relevant job
     job: {
       type: mongoose.Schema.Types.ObjectId,

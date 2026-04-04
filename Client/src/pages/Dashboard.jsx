@@ -51,11 +51,28 @@ function AdminDashboard() {
         ))}
       </div>
 
+      {stats?.pendingTechCount > 0 && (
+        <div className="card" style={{ marginBottom: '2rem', border: '1px solid var(--status-pending)', background: 'rgba(245,158,11,0.05)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+              <div style={{ fontSize: '2rem' }}>👷</div>
+              <div>
+                <h3 style={{ margin: 0 }}>{stats.pendingTechCount} Technician{stats.pendingTechCount > 1 ? 's' : ''} Awaiting Approval</h3>
+                <p style={{ margin: 0, fontSize: '0.9rem', color: 'var(--text-secondary)' }}>New team members are waiting to be activated.</p>
+              </div>
+            </div>
+            <button className="btn btn-primary" onClick={() => navigate('/users')}>
+              Manage Team
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className="grid-2">
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
           <div className="card">
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem' }}>
-              <h3>Recent Jobs</h3>
+              <h3>Recent Request Queue</h3>
               <button className="btn btn-secondary btn-sm" onClick={() => navigate('/jobs')}>View All</button>
             </div>
             {stats?.recentJobs?.length === 0 ? (
@@ -69,7 +86,7 @@ function AdminDashboard() {
                   <div key={job._id}
                     className="job-card"
                     onClick={() => navigate(`/jobs/${job._id}`)}
-                    style={{ padding: '1rem' }}
+                    style={{ padding: '1rem', borderLeft: `4px solid ${job.priority === 'URGENT' ? '#ef4444' : 'transparent'}` }}
                   >
                     <div className="job-card-header">
                       <span className="job-card-title">{job.title}</span>
@@ -77,7 +94,7 @@ function AdminDashboard() {
                     </div>
                     <div className="job-card-meta">
                       <span>👤 {job.client?.name}</span>
-                      {job.technician && <span>🔧 {job.technician?.name}</span>}
+                      <span>📍 {job.location || 'No location set'}</span>
                     </div>
                   </div>
                 ))}
@@ -86,32 +103,55 @@ function AdminDashboard() {
           </div>
         </div>
 
-        <div className="card">
-          <h3 style={{ marginBottom: '1rem' }}>Job Distribution</h3>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.875rem' }}>
-            {[
-              { label: 'Pending', value: stats?.pending, total: stats?.total, color: '#f59e0b' },
-              { label: 'Assigned', value: stats?.assigned, total: stats?.total, color: '#6366f1' },
-              { label: 'In Progress', value: stats?.inProgress, total: stats?.total, color: '#3b82f6' },
-              { label: 'Completed', value: stats?.completed, total: stats?.total, color: '#10b981' },
-              { label: 'Cancelled', value: stats?.cancelled, total: stats?.total, color: '#ef4444' },
-            ].map(item => (
-              <div key={item.label}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.35rem', fontSize: '0.85rem' }}>
-                  <span style={{ color: 'var(--text-secondary)' }}>{item.label}</span>
-                  <span style={{ fontWeight: 600 }}>{item.value ?? 0}</span>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+          <div className="card">
+            <h3 style={{ marginBottom: '1.25rem' }}>Quick Actions</h3>
+            <div className="grid-2" style={{ gap: '0.75rem' }}>
+              <button className="btn btn-secondary" style={{ padding: '1rem', flexDirection: 'column', gap: '0.5rem', height: 'auto' }} onClick={() => navigate('/jobs/new')}>
+                <span style={{ fontSize: '1.5rem' }}>➕</span>
+                <span>New Job</span>
+              </button>
+              <button className="btn btn-secondary" style={{ padding: '1rem', flexDirection: 'column', gap: '0.5rem', height: 'auto' }} onClick={() => navigate('/users')}>
+                <span style={{ fontSize: '1.5rem' }}>👥</span>
+                <span>Team</span>
+              </button>
+              <button className="btn btn-secondary" style={{ padding: '1rem', flexDirection: 'column', gap: '0.5rem', height: 'auto' }} onClick={() => navigate('/jobs')}>
+                <span style={{ fontSize: '1.5rem' }}>📋</span>
+                <span>Reports</span>
+              </button>
+              <button className="btn btn-secondary" style={{ padding: '1rem', flexDirection: 'column', gap: '0.5rem', height: 'auto' }} onClick={() => navigate('/profile')}>
+                <span style={{ fontSize: '1.5rem' }}>👤</span>
+                <span>Profile</span>
+              </button>
+            </div>
+          </div>
+          
+          <div className="card">
+            <h3 style={{ marginBottom: '1rem' }}>Job Distribution</h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.875rem' }}>
+              {[
+                { label: 'Pending', value: stats?.pending, total: stats?.total, color: '#f59e0b' },
+                { label: 'Assigned', value: stats?.assigned, total: stats?.total, color: '#6366f1' },
+                { label: 'In Progress', value: stats?.inProgress, total: stats?.total, color: '#3b82f6' },
+                { label: 'Completed', value: stats?.completed, total: stats?.total, color: '#10b981' },
+              ].map(item => (
+                <div key={item.label}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.35rem', fontSize: '0.85rem' }}>
+                    <span style={{ color: 'var(--text-secondary)' }}>{item.label}</span>
+                    <span style={{ fontWeight: 600 }}>{item.value ?? 0}</span>
+                  </div>
+                  <div style={{ height: 6, background: 'var(--bg-elevated)', borderRadius: 3, overflow: 'hidden' }}>
+                    <div style={{
+                      height: '100%',
+                      width: `${item.total > 0 ? ((item.value ?? 0) / item.total) * 100 : 0}%`,
+                      background: item.color,
+                      borderRadius: 3,
+                      transition: 'width 1s ease',
+                    }} />
+                  </div>
                 </div>
-                <div style={{ height: 6, background: 'var(--bg-elevated)', borderRadius: 3, overflow: 'hidden' }}>
-                  <div style={{
-                    height: '100%',
-                    width: `${item.total > 0 ? ((item.value ?? 0) / item.total) * 100 : 0}%`,
-                    background: item.color,
-                    borderRadius: 3,
-                    transition: 'width 1s ease',
-                  }} />
-                </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         </div>
       </div>
@@ -174,21 +214,35 @@ function TechnicianDashboard() {
         </div>
       ) : (
         <div className="card">
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem' }}>
-            <h3>Active Assignments</h3>
-            <button className="btn btn-secondary btn-sm" onClick={() => navigate('/jobs')}>View All</button>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1.25rem' }}>
+            <h3>Assigned Workload</h3>
+            <button className="btn btn-secondary btn-sm" onClick={() => navigate('/jobs')}>View Schedule</button>
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.875rem' }}>
             {jobs.map(job => (
-              <div key={job._id} className="job-card" onClick={() => navigate(`/jobs/${job._id}`)}>
+              <div 
+                key={job._id} 
+                className="job-card" 
+                onClick={() => navigate(`/jobs/${job._id}`)}
+                style={{ borderLeft: `4px solid ${job.status === 'IN_PROGRESS' ? 'var(--primary)' : 'var(--border)'}` }}
+              >
                 <div className="job-card-header">
-                  <span className="job-card-title">{job.title}</span>
+                  <div>
+                    <div className="job-card-title">{job.title}</div>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>ID: {job._id.slice(-6).toUpperCase()}</div>
+                  </div>
                   <StatusBadge status={job.status} />
                 </div>
-                <div className="job-card-meta">
-                  <span>👤 {job.client?.name}</span>
-                  {job.scheduledAt && <span>📅 {new Date(job.scheduledAt).toLocaleDateString()}</span>}
-                  {job.location && <span>📍 {job.location}</span>}
+                <div className="job-card-footer" style={{ border: 'none', padding: 0 }}>
+                  <div className="job-card-meta">
+                    <span>📅 {new Date(job.scheduledAt || job.createdAt).toLocaleDateString()}</span>
+                    <span>📍 {job.location || 'Field Site'}</span>
+                  </div>
+                  {job.status === 'ASSIGNED' && (
+                    <button className="btn btn-primary btn-sm" onClick={(e) => { e.stopPropagation(); navigate(`/jobs/${job._id}`); }}>
+                      Start Job
+                    </button>
+                  )}
                 </div>
               </div>
             ))}

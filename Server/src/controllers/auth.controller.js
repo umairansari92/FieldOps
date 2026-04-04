@@ -54,6 +54,7 @@ const register = async (req, res) => {
       if (admin) {
         await Notification.create({
           recipient: admin._id,
+          sender: user._id,
           message: `New technician "${user.name}" has signed up and awaits approval.`,
           type: 'TECH_SIGNUP',
         });

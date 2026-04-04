@@ -6,16 +6,19 @@ const adminNav = [
   { to: '/dashboard', icon: '🏠', label: 'Overview' },
   { to: '/jobs', icon: '💼', label: 'All Jobs' },
   { to: '/users', icon: '👥', label: 'Team' },
+  { to: '/profile', icon: '👤', label: 'My Profile' },
 ];
 
 const techNav = [
   { to: '/dashboard', icon: '🏠', label: 'My Dashboard' },
   { to: '/jobs', icon: '📋', label: 'My Jobs' },
+  { to: '/profile', icon: '👤', label: 'My Profile' },
 ];
 
 const clientNav = [
   { to: '/dashboard', icon: '🏠', label: 'Dashboard' },
   { to: '/jobs', icon: '📋', label: 'My Jobs' },
+  { to: '/profile', icon: '👤', label: 'My Profile' },
 ];
 
 const navMap = { ADMIN: adminNav, TECHNICIAN: techNav, CLIENT: clientNav };

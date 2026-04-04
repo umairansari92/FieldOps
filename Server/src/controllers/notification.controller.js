@@ -5,6 +5,7 @@ const getNotifications = async (req, res) => {
   try {
     const notifications = await Notification.find({ recipient: req.user._id })
       .populate('job', 'title status')
+      .populate('sender', 'name email role')
       .sort({ createdAt: -1 })
       .limit(50);
 
