@@ -32,6 +32,19 @@ export default function Profile() {
             <div className={`role-pill role-pill-${user.role.toLowerCase()}`} style={{ display: 'inline-block', marginBottom: '1rem' }}>
               {user.role}
             </div>
+
+            {user.role === 'TECHNICIAN' && user.fields?.length > 0 && (
+              <div style={{ marginBottom: '1rem' }}>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '0.5rem' }}>Specializations</div>
+                <div style={{ display: 'flex', gap: '0.25rem', flexWrap: 'wrap', justifyContent: 'center' }}>
+                  {user.fields.map(f => (
+                    <span key={f} style={{ fontSize: '0.7rem', padding: '0.2rem 0.6rem', borderRadius: 20, background: 'rgba(99,102,241,0.1)', color: 'var(--primary-light)', border: '1px solid rgba(99,102,241,0.2)' }}>
+                      {f}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
             <div style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', borderTop: '1px solid var(--border)', paddingTop: '1rem', marginTop: '1rem' }}>
               Member since {joinedDate}
             </div>

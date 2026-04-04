@@ -14,7 +14,7 @@ const generateToken = (user) => {
 // POST /api/auth/register
 const register = async (req, res) => {
   try {
-    const { name, email, password, role } = req.body;
+    const { name, email, password, role, fields } = req.body;
 
     if (!name || !email || !password) {
       return res.status(400).json({ message: 'Name, email, and password are required.' });
@@ -47,6 +47,7 @@ const register = async (req, res) => {
       password: hashedPassword,
       role: userRole,
       isActive,
+      fields: userRole === 'TECHNICIAN' ? fields || [] : [],
     });
 
     if (userRole === 'TECHNICIAN') {
@@ -72,6 +73,7 @@ const register = async (req, res) => {
         email: user.email,
         role: user.role,
         isActive: user.isActive,
+        fields: user.fields,
         createdAt: user.createdAt,
       },
     });

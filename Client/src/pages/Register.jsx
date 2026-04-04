@@ -6,11 +6,20 @@ import toast from 'react-hot-toast';
 export default function Register() {
   const { register } = useAuth();
   const navigate = useNavigate();
-  const [form, setForm] = useState({ name: '', email: '', password: '', role: 'CLIENT' });
+  const [form, setForm] = useState({ name: '', email: '', password: '', role: 'CLIENT', fields: [] });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
+  const availableFields = ['HVAC', 'Electrical', 'Plumbing', 'General Maintenance', 'IT/Networking'];
+
   const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
+
+  const handleFieldToggle = (field) => {
+    const updatedFields = form.fields.includes(field)
+      ? form.fields.filter(f => f !== field)
+      : [...form.fields, field];
+    setForm({ ...form, fields: updatedFields });
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -21,7 +30,7 @@ export default function Register() {
     }
     setLoading(true);
     try {
-      const user = await register(form.name, form.email, form.password, form.role);
+      const user = await register(form.name, form.email, form.password, form.role, form.fields);
       if (user.isActive === false) {
         toast.success('Registration successful. Your account is pending admin approval.', { duration: 5000 });
         navigate('/login');
@@ -78,6 +87,25 @@ export default function Register() {
               <option value="TECHNICIAN">Technician (I perform field jobs)</option>
             </select>
           </div>
+
+          {form.role === 'TECHNICIAN' && (
+            <div className="form-group" style={{ animation: 'fadeIn 0.3s ease' }}>
+              <label className="form-label">My Specializations (Select all that apply)</label>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', background: 'var(--bg-elevated)', padding: '1rem', borderRadius: 'var(--radius)', border: '1px solid var(--border)' }}>
+                {availableFields.map(field => (
+                  <label key={field} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.85rem', cursor: 'pointer' }}>
+                    <input 
+                      type="checkbox" 
+                      checked={form.fields.includes(field)} 
+                      onChange={() => handleFieldToggle(field)}
+                      style={{ accentColor: 'var(--primary)' }}
+                    />
+                    {field}
+                  </label>
+                ))}
+              </div>
+            </div>
+          )}
 
           <button className="btn btn-primary btn-full btn-lg" type="submit" disabled={loading} style={{ marginTop: '0.5rem' }}>
             {loading ? <><div className="spinner" style={{ width: 18, height: 18 }} /> Creating account...</> : 'Create Account →'}

@@ -21,10 +21,10 @@ The system relies on strong separation of concerns:
 ## 3. Database Design Rationale
 
 ### Entity Relationship & Schema Logic
-1.  **Users** (`name`, `email`, `password`, `role`, `isActive`): Central auth entity. Rather than having separate tables for Technicians, Clients, and Admins, they are unified under `Users` with a `role` enum. This simplifies authentication middleware significantly.
+1.  **Users** (`name`, `email`, `password`, `role`, `isActive`, `fields`): Central auth entity. Rather than having separate tables for Technicians, Clients, and Admins, they are unified under `Users` with a `role` enum. The `fields` array stores professional specializations for technicians (e.g., HVAC, Electrical). This simplifies authentication middleware significantly.
 2.  **Jobs (One-to-Many Focus):** The system relies on a **One-to-Many** relationship (One Client can have Many Jobs, One Technician can have Many Jobs). We use Mongoose references (`ObjectId`) pointing back to the `User` collection. This prevents data duplication and keeps the Job documents lean.
 3.  **ActivityLog (Audit Trail)**: *Crucial for Data Integrity.* Instead of just keeping a nested array of notes inside the Job document, a dedicated collection is used. This prevents the Job document from exceeding BSON size limits over years of updates, and allows for global audit-log queries.
-4.  **Notifications**: Standalone collection for polling. The frontend periodically polls the notification endpoint to fetch unread updates.
+4.  **Notifications (Task Carriers)**: Standalone collection for communication. Each notification tracks the `recipient`, a `sender` (the actor who triggered the event), and an optional `job` reference. This enables the frontend to render "Action Cards" where admins can approve technicians or view job details directly from the notification bell.
 
 ### Data Integrity & Future Growth
 * **Soft Deletes Strategy:** High-maturity data systems rarely use `DELETE` operations. Instead, data integrity is maintained using "Soft Deletes" (e.g., setting a `status` to `CANCELLED` or an `isActive` flag on Users). This ensures historical records are permanently preserved "even if something goes wrong".
@@ -40,7 +40,10 @@ To handle massive growth, indexes were placed on frequently queried fields:
 Tokens are generated via `jsonwebtoken` and expire after 7 days. This stateless authentication is suitable for Admin, Tech, and Client roles.
 
 *   **Hashing:** Passwords are never stored in plain text. They are hashed using **`bcrypt`** (12 salt rounds) before hitting the disk.
-*   **Registration Flow:** To maintain organizational security, Technician accounts are **Invite-based** (created by Admins internally), while Clients can theoretically register themselves via an **Open** registration portal.
+*   **Registration Flow (Approval-Based):** 
+    *   **Admins:** Strictly blocked from public registration. Only one initial admin is seeded; further admin creation is handled via internal database access to prevent unauthorized escalations.
+    *   **Technicians:** Can register publicly but remain in an `isActive: false` state. They are prohibited from logging in until an **Admin** reviews their registration and approves them via the Team Management portal.
+    *   **Clients:** Open registration; accounts are active immediately to ensure a low-friction service request experience.
 
 The backend utilizes standard Express Request Middleware:
 1.  `auth.middleware.js`: Mounts the user object onto `req.user` if the JWT is valid.
@@ -52,9 +55,12 @@ The backend utilizes standard Express Request Middleware:
 
 Instead, the frontend optimization is handled via logical API hooks and the backend uses efficient REST endpoints.
 
-### Email Notifications
+### In-App Notification Center
 I explicitly chose **not to build an automated email notification system (e.g., Nodemailer / SendGrid)**. 
-**Why?** The requirements stated the system must "run locally without paid services." Emulating an SMTP server locally or requiring reviewers to plug in an API key creates friction during testing. Instead, I diverted that engineering effort into building a robust, database-backed **in-app notification center** with real-time polling, which perfectly satisfies the "relevant parties should be informed" requirement while ensuring the app works 100% locally out-of-the-box.
+**Why?** The requirements stated the system must "run locally without paid services." Instead, I built a robust **Actionable Notification System**:
+- **Task Carriers:** Notifications are not just text; they carry context (e.g., `sender`, `jobId`).
+- **Quick Action UI:** Clicking a notification opens an "Action Card" (Modal) allowing Admins to approve technicians or jump to job details without navigating away from their current view.
+- **Auto-Read Logic:** To ensure UX fluidity, notifications are marked as read the moment they are interacted with, reducing dashboard clutter.
 
 ## 6. Core Workflows (Visualized)
 
@@ -86,7 +92,23 @@ I explicitly chose **not to build an automated email notification system (e.g., 
  (Marks Done)         │
        │  ◀───────────┘
        ▼
-   COMPLETED
+    COMPLETED
+
+### Technician Onboarding Flow
+```txt
+ [ TECHNICIAN ] 
+        │ (Public Registration)
+        ▼
+   PENDING APPROVAL (isActive: false)
+        │
+   [ ADMIN NOTIFIED ]
+        │
+   [ ADMIN REVIEWS ] ──┐ (Rejection/Deactivation)
+        │              ▼
+   (Approves)       INACTIVE
+        │
+        ▼
+     ACTIVE (Can Log In)
 ```
 
 ## 7. Role Permissions Matrix
@@ -98,6 +120,8 @@ I explicitly chose **not to build an automated email notification system (e.g., 
 | **Reassign / Cancel Job** | ✅ | ❌ | ❌ |
 | **Update Status** | ✅ | ✅ (If Assigned) | ❌ |
 | **Add Job Notes** | ✅ | ✅ (If Assigned) | ❌ |
+| **Approve Technicians**| ✅ | ❌ | ❌ |
+| **View Team Dashboard**| ✅ | ❌ | ❌ |
 | **View Internal Audit Logs**| ✅ | ✅ (Own Jobs) | ❌ |
 | **View Job Status** | ✅ | ✅ (Own Jobs) | ✅ (Own Requests)|
 
@@ -109,7 +133,11 @@ The API follows strict standard RESTful conventions using plural nouns and HTTP 
 - **Purpose:** Updates the state of the job.
 - **Middleware:** `auth()`, `role('ADMIN', 'TECHNICIAN')`
 - **Controller Logic:** Validates that the Technician executing the request actually owns the Job. Converts the new status, throws `400 Bad Request` on invalid state transitions.
-- **Side Effects:** Automatically generates an `ActivityLog` document linking the `actorId` to the status transition (e.g., `ASSIGNED` -> `IN_PROGRESS`).
+- **Side Effects:** Automatically generates an `ActivityLog` document linking the `actorId` to the status transition.
+
+**`PATCH /api/users/:id/status`**
+- **Purpose:** Admin-only endpoint to toggle the `isActive` flag.
+- **Business Rule:** Used to approve technicians. Once `isActive` is true, the user is notified (via the next login attempt success) and can access the platform.
 
 ---
 

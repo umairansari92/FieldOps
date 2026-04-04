@@ -195,7 +195,11 @@ export default function JobDetail() {
                           onChange={(e) => setSelectedTech(e.target.value)}
                         >
                           <option value="">-- Select Tech --</option>
-                          {technicians.map(t => <option key={t._id} value={t._id}>{t.name}</option>)}
+                          {technicians.map(t => (
+                            <option key={t._id} value={t._id}>
+                              {t.name} {t.fields?.length > 0 ? `(${t.fields.join(', ')})` : ''}
+                            </option>
+                          ))}
                         </select>
                         <button 
                           className="btn btn-primary" 

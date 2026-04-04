@@ -25,8 +25,8 @@ export const AuthProvider = ({ children }) => {
     return data.user;
   };
 
-  const register = async (name, email, password, role) => {
-    const { data } = await api.post('/auth/register', { name, email, password, role });
+  const register = async (name, email, password, role, fields = []) => {
+    const { data } = await api.post('/auth/register', { name, email, password, role, fields });
     
     if (data.user.isActive === false) {
       return data.user; // Don't log in automatically if approval is needed

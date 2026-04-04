@@ -27,14 +27,14 @@ const seed = async () => {
   // Create demo users
   const [admin, tech1, tech2, techPending, client1, client2] = await User.insertMany([
     { name: 'Admin User', email: 'admin@fieldops.com', password: await hash('admin123'), role: 'ADMIN' },
-    { name: 'John Technician', email: 'john@fieldops.com', password: await hash('john123'), role: 'TECHNICIAN', isActive: true },
-    { name: 'Sara Technician', email: 'sara@fieldops.com', password: await hash('sara123'), role: 'TECHNICIAN', isActive: true },
-    { name: 'Areeb Technician', email: 'areeb@fieldops.com', password: await hash('areeb123'), role: 'TECHNICIAN', isActive: false },
+    { name: 'John Technician', email: 'john@fieldops.com', password: await hash('john123'), role: 'TECHNICIAN', isActive: true, fields: ['Electrical', 'Lighting'] },
+    { name: 'Sara Technician', email: 'sara@fieldops.com', password: await hash('sara123'), role: 'TECHNICIAN', isActive: true, fields: ['HVAC', 'Refrigeration'] },
+    { name: 'Areeb Technician', email: 'areeb@fieldops.com', password: await hash('areeb123'), role: 'TECHNICIAN', isActive: false, fields: ['Plumbing', 'Drainage'] },
     { name: 'Acme Corp', email: 'acme@client.com', password: await hash('acme123'), role: 'CLIENT', isActive: true },
     { name: 'Beta Industries', email: 'beta@client.com', password: await hash('beta123'), role: 'CLIENT', isActive: true },
   ]);
 
-  console.log('👥 Created 6 demo users (including 1 pending tech)');
+  console.log('👥 Created 6 demo users with specialized fields');
 
   // Create demo jobs
   const job1 = await Job.create({

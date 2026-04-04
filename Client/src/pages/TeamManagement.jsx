@@ -60,6 +60,7 @@ export default function TeamManagement() {
                   <th style={{ padding: '1rem', fontWeight: 600 }}>Name</th>
                   <th style={{ padding: '1rem', fontWeight: 600 }}>Email</th>
                   <th style={{ padding: '1rem', fontWeight: 600 }}>Role</th>
+                  <th style={{ padding: '1rem', fontWeight: 600 }}>Specialization</th>
                   <th style={{ padding: '1rem', fontWeight: 600 }}>Status</th>
                   <th style={{ padding: '1rem', fontWeight: 600, textAlign: 'right' }}>Actions</th>
                 </tr>
@@ -73,6 +74,17 @@ export default function TeamManagement() {
                       <span className="badge" style={{ backgroundColor: 'var(--bg-elevated)', border: '1px solid var(--border)' }}>
                         {user.role}
                       </span>
+                    </td>
+                    <td style={{ padding: '1rem' }}>
+                      <div style={{ display: 'flex', gap: '0.25rem', flexWrap: 'wrap' }}>
+                        {user.role === 'TECHNICIAN' && user.fields?.length > 0 ? (
+                          user.fields.map(f => (
+                            <span key={f} style={{ fontSize: '0.7rem', padding: '0.1rem 0.4rem', borderRadius: 4, background: 'rgba(99,102,241,0.1)', color: 'var(--primary-light)', border: '1px solid rgba(99,102,241,0.2)' }}>
+                              {f}
+                            </span>
+                          ))
+                        ) : '-'}
+                      </div>
                     </td>
                     <td style={{ padding: '1rem' }}>{getStatusBadge(user)}</td>
                     <td style={{ padding: '1rem', textAlign: 'right' }}>
