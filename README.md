@@ -127,3 +127,16 @@ Because field service workflows vary greatly across companies, the following str
 *   **File Uploads:** Field service often mandates photo proof for completed jobs. Integration with AWS S3 / GridFS was omitted to focus exclusively on solidifying the backend state machine.
 *   **Auto-Assignment Logic:** Having the system automatically dispatch technicians based on geolocation and `skills` tag matching is an enterprise feature. Due to time constraints, assignment requires manual Admin intervention.
 *   **"Forgot Password" Email Flow:** Standard auth recovery flows requiring SMTP emulation were bypassed to maintain strict focus on the core "Field Service" domain.
+
+---
+
+## 🤖 AI Collaboration Acknowledgement
+
+In alignment with modern engineering practices, this project was developed with the assistance of AI pair-programming tools (Gemini & ChatGPT). 
+
+AI was intentionally utilized as a sounding board to:
+1. Challenge architectural assumptions.
+2. Refine Edge-Case documentation (`QUESTIONS.md`).
+3. Bounce system design concepts for RBAC and state machine logic.
+
+The core business logic, schema modeling logic, and RESTful routing flow demonstrate my direct engineering competency and understanding of the MERN stack.
