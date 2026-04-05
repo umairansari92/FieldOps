@@ -6,20 +6,11 @@ import toast from 'react-hot-toast';
 export default function Register() {
   const { register } = useAuth();
   const navigate = useNavigate();
-  const [form, setForm] = useState({ name: '', email: '', password: '', role: 'CLIENT', fields: [] });
+  const [form, setForm] = useState({ name: '', email: '', password: '', role: 'CLIENT', fields: '' });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const availableFields = ['HVAC', 'Electrical', 'Plumbing', 'General Maintenance', 'IT/Networking'];
-
   const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
-
-  const handleFieldToggle = (field) => {
-    const updatedFields = form.fields.includes(field)
-      ? form.fields.filter(f => f !== field)
-      : [...form.fields, field];
-    setForm({ ...form, fields: updatedFields });
-  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -28,9 +19,15 @@ export default function Register() {
       setError('Password must be at least 6 characters.');
       return;
     }
+
+    // Convert comma-separated string to array for backend
+    const fieldsArray = form.fields
+      ? form.fields.split(',').map(f => f.trim()).filter(f => f !== '')
+      : [];
+
     setLoading(true);
     try {
-      const user = await register(form.name, form.email, form.password, form.role, form.fields);
+      const user = await register(form.name, form.email, form.password, form.role, fieldsArray);
       if (user.isActive === false) {
         toast.success('Registration successful. Your account is pending admin approval.', { duration: 5000 });
         navigate('/login');
@@ -90,20 +87,19 @@ export default function Register() {
 
           {form.role === 'TECHNICIAN' && (
             <div className="form-group" style={{ animation: 'fadeIn 0.3s ease' }}>
-              <label className="form-label">My Specializations (Select all that apply)</label>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', background: 'var(--bg-elevated)', padding: '1rem', borderRadius: 'var(--radius)', border: '1px solid var(--border)' }}>
-                {availableFields.map(field => (
-                  <label key={field} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.85rem', cursor: 'pointer' }}>
-                    <input 
-                      type="checkbox" 
-                      checked={form.fields.includes(field)} 
-                      onChange={() => handleFieldToggle(field)}
-                      style={{ accentColor: 'var(--primary)' }}
-                    />
-                    {field}
-                  </label>
-                ))}
-              </div>
+              <label className="form-label" htmlFor="fields">My Specializations</label>
+              <input 
+                id="fields"
+                className="form-input"
+                name="fields"
+                placeholder="e.g. HVAC, Electrical, Solar (use commas)"
+                value={form.fields}
+                onChange={handleChange}
+                required
+              />
+              <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '0.4rem' }}>
+                Enter your fields separated by commas.
+              </p>
             </div>
           )}
 
