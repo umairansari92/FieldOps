@@ -1,4 +1,4 @@
-const mongoose = require('mongoose');
+import mongoose from 'mongoose';
 
 // Every important action on a job is logged here for data integrity and audit trail
 const activityLogSchema = new mongoose.Schema(
@@ -36,4 +36,4 @@ const activityLogSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-module.exports = mongoose.model('ActivityLog', activityLogSchema);
+export default mongoose.model('ActivityLog', activityLogSchema);

@@ -1,7 +1,7 @@
-const Notification = require('../models/Notification.model');
+import Notification from '../models/Notification.model.js';
 
 // GET /api/notifications — Current user's notifications
-const getNotifications = async (req, res) => {
+export const getNotifications = async (req, res) => {
   try {
     const notifications = await Notification.find({ recipient: req.user._id })
       .populate('job', 'title status')
@@ -19,7 +19,7 @@ const getNotifications = async (req, res) => {
 };
 
 // PATCH /api/notifications/mark-all-read
-const markAllRead = async (req, res) => {
+export const markAllRead = async (req, res) => {
   try {
     await Notification.updateMany({ recipient: req.user._id, read: false }, { read: true });
     res.json({ message: 'All notifications marked as read.' });
@@ -30,7 +30,7 @@ const markAllRead = async (req, res) => {
 };
 
 // PATCH /api/notifications/:id/read
-const markOneRead = async (req, res) => {
+export const markOneRead = async (req, res) => {
   try {
     const notification = await Notification.findOneAndUpdate(
       { _id: req.params.id, recipient: req.user._id },
@@ -45,4 +45,5 @@ const markOneRead = async (req, res) => {
   }
 };
 
-module.exports = { getNotifications, markAllRead, markOneRead };
+// Remove module.exports
+

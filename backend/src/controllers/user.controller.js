@@ -1,7 +1,7 @@
-const User = require('../models/User.model');
+import User from '../models/User.model.js';
 
 // GET /api/users — Admin only — list all users (filterable by role)
-const getUsers = async (req, res) => {
+export const getUsers = async (req, res) => {
   try {
     const filter = {};
     if (req.query.role) filter.role = req.query.role;
@@ -15,7 +15,7 @@ const getUsers = async (req, res) => {
 };
 
 // GET /api/users/:id — Admin only
-const getUserById = async (req, res) => {
+export const getUserById = async (req, res) => {
   try {
     const user = await User.findById(req.params.id).select('-password');
     if (!user) return res.status(404).json({ message: 'User not found.' });
@@ -27,7 +27,7 @@ const getUserById = async (req, res) => {
 };
 
 // PATCH /api/users/:id/status — Admin only — activate/deactivate
-const toggleUserStatus = async (req, res) => {
+export const toggleUserStatus = async (req, res) => {
   try {
     const user = await User.findById(req.params.id);
     if (!user) return res.status(404).json({ message: 'User not found.' });
@@ -47,4 +47,5 @@ const toggleUserStatus = async (req, res) => {
   }
 };
 
-module.exports = { getUsers, getUserById, toggleUserStatus };
+// Remove module.exports
+

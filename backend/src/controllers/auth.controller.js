@@ -1,23 +1,23 @@
-const bcrypt = require('bcryptjs');
-const jwt = require('jsonwebtoken');
-const User = require('../models/User.model');
-const Notification = require('../models/Notification.model');
+import bcrypt from 'bcryptjs';
+import jwt from 'jsonwebtoken';
+import User from '../models/User.model.js';
+import Notification from '../models/Notification.model.js';
 
 const generateToken = (user) => {
   return jwt.sign(
     { id: user._id, role: user.role },
     process.env.JWT_SECRET,
-    { expiresIn: '7d' }
+    { expiresIn: '2d' }
   );
 };
 
 // POST /api/auth/register
-const register = async (req, res) => {
+export const register = async (req, res) => {
   try {
     const { name, email, password, role, fields } = req.body;
 
-    if (!name || !email || !password) {
-      return res.status(400).json({ message: 'Name, email, and password are required.' });
+    if (!name || !email || !password || !role || !fields) {
+      return res.status(400).json({ message: 'Name, email, password, role and fields are required.' });
     }
 
     const existing = await User.findOne({ email: email.toLowerCase() });
@@ -84,7 +84,7 @@ const register = async (req, res) => {
 };
 
 // POST /api/auth/login
-const login = async (req, res) => {
+export const login = async (req, res) => {
   try {
     const { email, password } = req.body;
 
@@ -126,8 +126,9 @@ const login = async (req, res) => {
 };
 
 // GET /api/auth/me
-const getMe = async (req, res) => {
+export const getMe = async (req, res) => {
   res.json({ user: req.user });
 };
 
-module.exports = { register, login, getMe };
+// Remove module.exports
+

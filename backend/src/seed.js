@@ -2,14 +2,14 @@
  * Seed script - creates demo users for testing all 3 roles.
  * Run with: npm run seed
  */
-const mongoose = require('mongoose');
-const bcrypt = require('bcryptjs');
-const dotenv = require('dotenv');
+import mongoose from 'mongoose';
+import bcrypt from 'bcryptjs';
+import dotenv from 'dotenv';
 dotenv.config();
 
-const User = require('./models/User.model');
-const Job = require('./models/Job.model');
-const ActivityLog = require('./models/ActivityLog.model');
+import User from './models/User.model.js';
+import Job from './models/Job.model.js';
+import ActivityLog from './models/ActivityLog.model.js';
 
 const seed = async () => {
   await mongoose.connect(process.env.MONGO_URI);

@@ -1,8 +1,8 @@
-const express = require('express');
+import express from 'express';
 const router = express.Router();
-const { getUsers, getUserById, toggleUserStatus } = require('../controllers/user.controller');
-const auth = require('../middleware/auth.middleware');
-const role = require('../middleware/role.middleware');
+import { getUsers, getUserById, toggleUserStatus } from '../controllers/user.controller.js';
+import auth from '../middleware/auth.middleware.js';
+import role from '../middleware/role.middleware.js';
 
 // All user management routes require Admin
 router.use(auth, role('ADMIN'));
@@ -11,4 +11,4 @@ router.get('/', getUsers);
 router.get('/:id', getUserById);
 router.patch('/:id/status', toggleUserStatus);
 
-module.exports = router;
+export default router;

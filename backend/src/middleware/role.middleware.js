@@ -16,4 +16,4 @@ const role = (...allowedRoles) => {
   };
 };
 
-module.exports = role;
+export default role;

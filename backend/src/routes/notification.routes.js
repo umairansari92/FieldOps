@@ -1,7 +1,7 @@
-const express = require('express');
+import express from 'express';
 const router = express.Router();
-const { getNotifications, markAllRead, markOneRead } = require('../controllers/notification.controller');
-const auth = require('../middleware/auth.middleware');
+import { getNotifications, markAllRead, markOneRead } from '../controllers/notification.controller.js';
+import auth from '../middleware/auth.middleware.js';
 
 router.use(auth);
 
@@ -9,4 +9,4 @@ router.get('/', getNotifications);
 router.patch('/mark-all-read', markAllRead);
 router.patch('/:id/read', markOneRead);
 
-module.exports = router;
+export default router;

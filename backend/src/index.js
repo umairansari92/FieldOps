@@ -1,7 +1,11 @@
-const express = require('express');
-const mongoose = require('mongoose');
-const cors = require('cors');
-const dotenv = require('dotenv');
+import express from 'express';
+import mongoose from 'mongoose';
+import cors from 'cors';
+import dotenv from 'dotenv';
+import authRoutes from './routes/auth.routes.js';
+import jobRoutes from './routes/job.routes.js';
+import userRoutes from './routes/user.routes.js';
+import notificationRoutes from './routes/notification.routes.js';
 
 dotenv.config();
 
@@ -15,10 +19,10 @@ app.use(cors({
 app.use(express.json());
 
 // Routes
-app.use('/api/auth', require('./routes/auth.routes'));
-app.use('/api/jobs', require('./routes/job.routes'));
-app.use('/api/users', require('./routes/user.routes'));
-app.use('/api/notifications', require('./routes/notification.routes'));
+app.use('/api/auth', authRoutes);
+app.use('/api/jobs', jobRoutes);
+app.use('/api/users', userRoutes);
+app.use('/api/notifications', notificationRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => res.json({ status: 'FieldOps API is running' }));

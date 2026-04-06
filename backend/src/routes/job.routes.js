@@ -1,6 +1,6 @@
-const express = require('express');
+import express from 'express';
 const router = express.Router();
-const {
+import {
   getJobs,
   getJobById,
   createJob,
@@ -8,9 +8,9 @@ const {
   updateStatus,
   addNote,
   getStats,
-} = require('../controllers/job.controller');
-const auth = require('../middleware/auth.middleware');
-const role = require('../middleware/role.middleware');
+} from '../controllers/job.controller.js';
+import auth from '../middleware/auth.middleware.js';
+import role from '../middleware/role.middleware.js';
 
 // All job routes require authentication
 router.use(auth);
@@ -36,4 +36,4 @@ router.patch('/:id/status', role('ADMIN', 'TECHNICIAN'), updateStatus);
 // POST /api/jobs/:id/notes — Admin or Technician
 router.post('/:id/notes', role('ADMIN', 'TECHNICIAN'), addNote);
 
-module.exports = router;
+export default router;

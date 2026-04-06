@@ -2,6 +2,7 @@
   "name": "fieldops-backend",
   "version": "1.0.0",
   "description": "FieldOps Field Service Management Platform - Backend API",
+  "type": "module",
   "main": "src/index.js",
   "scripts": {
     "start": "node src/index.js",

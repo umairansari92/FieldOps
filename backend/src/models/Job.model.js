@@ -1,4 +1,4 @@
-const mongoose = require('mongoose');
+import mongoose from 'mongoose';
 
 // Job statuses represent the full lifecycle of a field job
 const JOB_STATUSES = ['PENDING', 'ASSIGNED', 'ACCEPTED', 'IN_PROGRESS', 'BLOCKED', 'COMPLETED', 'CANCELLED'];
@@ -56,4 +56,4 @@ const jobSchema = new mongoose.Schema(
 jobSchema.index({ client: 1, status: 1 });
 jobSchema.index({ technician: 1, status: 1 });
 
-module.exports = mongoose.model('Job', jobSchema);
+export default mongoose.model('Job', jobSchema);

@@ -1,7 +1,7 @@
-const Job = require('../models/Job.model');
-const User = require('../models/User.model');
-const ActivityLog = require('../models/ActivityLog.model');
-const Notification = require('../models/Notification.model');
+import Job from '../models/Job.model.js';
+import User from '../models/User.model.js';
+import ActivityLog from '../models/ActivityLog.model.js';
+import Notification from '../models/Notification.model.js';
 
 // Helper to create an activity log entry
 const logActivity = async (jobId, actorId, message, type, previousStatus = null, newStatus = null) => {
@@ -16,7 +16,7 @@ const notify = async (recipientId, message, jobId, type, senderId = null) => {
 };
 
 // GET /api/jobs — Admins see all, Technicians see assigned, Clients see their own
-const getJobs = async (req, res) => {
+export const getJobs = async (req, res) => {
   try {
     let filter = {};
     const { status, priority } = req.query;
@@ -39,7 +39,7 @@ const getJobs = async (req, res) => {
 };
 
 // GET /api/jobs/:id
-const getJobById = async (req, res) => {
+export const getJobById = async (req, res) => {
   try {
     const job = await Job.findById(req.params.id)
       .populate('client', 'name email')
@@ -68,7 +68,7 @@ const getJobById = async (req, res) => {
 };
 
 // POST /api/jobs — Admin only
-const createJob = async (req, res) => {
+export const createJob = async (req, res) => {
   try {
     const { title, description, clientId, technicianId, scheduledAt, location, priority } = req.body;
 
@@ -127,7 +127,7 @@ const createJob = async (req, res) => {
 };
 
 // PATCH /api/jobs/:id/assign — Admin only
-const assignJob = async (req, res) => {
+export const assignJob = async (req, res) => {
   try {
     const { technicianId, scheduledAt } = req.body;
 
@@ -168,7 +168,7 @@ const assignJob = async (req, res) => {
 };
 
 // PATCH /api/jobs/:id/status — Admin or assigned Technician
-const updateStatus = async (req, res) => {
+export const updateStatus = async (req, res) => {
   try {
     const { status, note } = req.body;
 
@@ -222,7 +222,7 @@ const updateStatus = async (req, res) => {
 };
 
 // POST /api/jobs/:id/notes — Admin or assigned Technician
-const addNote = async (req, res) => {
+export const addNote = async (req, res) => {
   try {
     const { note } = req.body;
     if (!note || !note.trim()) {
@@ -253,7 +253,7 @@ const addNote = async (req, res) => {
 };
 
 // GET /api/jobs/stats — Admin only
-const getStats = async (req, res) => {
+export const getStats = async (req, res) => {
   try {
     const [total, pending, assigned, accepted, inProgress, blocked, completed, cancelled, pendingTechCount] = await Promise.all([
       Job.countDocuments(),
@@ -280,4 +280,5 @@ const getStats = async (req, res) => {
   }
 };
 
-module.exports = { getJobs, getJobById, createJob, assignJob, updateStatus, addNote, getStats };
+// Remove module.exports
+
