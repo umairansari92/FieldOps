@@ -21,7 +21,7 @@ const seed = async () => {
   await ActivityLog.deleteMany({});
   console.log('🗑️  Cleared existing data');
 
-  const salt = await bcrypt.genSalt(12);
+  const salt = await bcrypt.genSalt(10);
   const hash = (pwd) => bcrypt.hash(pwd, salt);
 
   // Create demo users
